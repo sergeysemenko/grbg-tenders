@@ -691,7 +691,7 @@ class IndexRSSEntries(webapp2.RequestHandler):
 			b = is_interleaved_body(entry.desc)
 			if b:
 				logging.info('bad : %s' % b)
-				keyname = entry.url
+				keyname = keyname_from_link(entry.url)
 # 				daydate = datetime.datetime(year=entry.date.year, month=entry.date.month, 
 # 								   day=entry.date.day)
 				bad = RSSBadEntry.get_or_insert(keyname, url=entry.url, desc=entry.desc, bad=b, date=entry.date)
