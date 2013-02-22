@@ -1,0 +1,40 @@
+application: grbg-tenders
+version: 3
+runtime: python27
+api_version: 1
+threadsafe: true
+
+
+
+handlers:
+
+- url: /admin_.*
+  script: helloworld.app
+  login: admin
+  auth_fail_action: redirect
+
+- url: /bootstrap
+  static_dir: bootstrap
+
+- url: /stylesheets
+  static_dir: stylesheets
+
+
+  
+- url: /.*
+  script: helloworld.app
+
+
+
+
+builtins:
+- remote_api: on
+
+
+- appstats: on
+
+libraries:
+- name: jinja2
+  version: latest
+
+

@@ -1,0 +1,15 @@
+
+
+      <hr>
+
+      <p> <b>Total frauds: {{num_links}} </b> </p>
+    {%for entry in entries %}
+    	<p>
+    	<a href="{{ entry.url }}"  target="_blank">{{ entry.url }}</a>
+    	<br>
+    	<i>{{entry.decorated()|safe}}</i>
+    	<br>
+    	<pre>date: {{entry.date}}</pre>
+    {% endfor %}
+		{{msg}}
+      <hr>

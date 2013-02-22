@@ -1,0 +1,16 @@
+cron:
+- description: new day fetching job
+  url: /admin_fetch_rss
+  schedule: every 4 hours synchronized
+
+- description: new day index job
+  url: /admin_index_rss_entries
+  schedule: every 4 hours synchronized
+
+- description: backwards fetching job
+  url: /admin_fetch_rss?date=backwards
+  schedule: every 10 minutes synchronized
+
+- description: backwards indexing job
+  url: /admin_index_rss_entries?date=backwards
+  schedule: every 20 minutes synchronized
