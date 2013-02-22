@@ -344,8 +344,16 @@ class ParsedRSSEntry:
 		return 'link: %s\n desc:%s\n published:%s\n published_parsed:%s' % (self.link, 
 			self.desc, self.published, self.published_parsed)
 	
-	def to_db_entry(self):
-		return RSSEntry(url=self.link.decode('utf-8'), desc=self.desc.decode('utf-8'), date=self.published_parsed)
+	
+	def get_or_insert(self, key):
+		return RSSEntry.get_or_insert(key, url=self.link.decode('utf-8'), 
+									  desc=self.desc.decode('utf-8'), 
+									  date=self.published_parsed)
+
+def keyname_from_link(link):
+	pcs = link.split('purchaseId=')
+	id = pcs[1].split('&')[0]
+	return str(int(id))
 
 def fetch_rss_by_range2(datestr, end, start):
 	price_params = price_params_tmpl % (end, start)
@@ -358,12 +366,15 @@ def fetch_rss_by_range2(datestr, end, start):
 		if 'pubDate' in chunk:
 			edict = parse_rss_chunk(chunk)
 			entry = ParsedRSSEntry(edict)
-			entries.append(entry.to_db_entry())
+			entries.append(entry)
 	return entries
 
 def day_date(date):
 	return datetime.datetime(year=date.year, month=date.month, day=date.day)		
 
+
+def fetch_key(id):
+	return 'batch_fetch_key_%s' % id
 
 class FetchRSSBatch(webapp2.RequestHandler):
 	def post(self):
@@ -374,8 +385,13 @@ class FetchRSSBatch(webapp2.RequestHandler):
 		logging.info(msg)
 		entries = fetch_rss_by_range2(datestr, end, start)
 		logging.info("start %s, end%s fetched %d" % (start, end,len(entries)))
-		db.put(entries)
-		self.redirect('/')
+		for entry in entries:
+			id = keyname_from_link(entry.link.decode('utf-8'))
+			val = memcache.get(fetch_key(id))
+			if val == None:
+				entry.get_or_insert(id)
+		#db.put(entries)
+		#self.redirect('/')
 		
         
 
@@ -391,7 +407,7 @@ def get_prev_back_date():
 class FetchRSS(webapp2.RequestHandler):
 	def fetch(self, datestr):
 		logging.info('FETCHING RSS FOR DATE %s' % datestr)
-		range = 100000
+		range = 49999
 		bigrange = range*5
 		start = 0
 		toohigh = 1000000
@@ -406,7 +422,8 @@ class FetchRSS(webapp2.RequestHandler):
 				'start': start 
 			}
 			taskqueue.add(url='/admin_fetch_rss_batch', params=params)
-			start +=  cur_range
+			start +=  cur_range +10
+			
 		params = {
 			'date' : datestr,
 			'end'  : start + cur_range,

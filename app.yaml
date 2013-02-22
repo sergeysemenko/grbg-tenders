@@ -6,7 +6,12 @@ threadsafe: true
 
 
 
+
 handlers:
+
+- url: /favicon\.ico
+  static_files: stylesheets/favicon.ico
+  upload: stylesheets/favicon.ico
 
 - url: /admin_.*
   script: main.app
