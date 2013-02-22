@@ -377,6 +377,8 @@ def fetch_key(id):
 	return 'batch_fetch_key_%s' % id
 
 class FetchRSSBatch(webapp2.RequestHandler):
+		
+		
 	def post(self):
 		datestr = self.request.get('date')
 		start = self.request.get('start')
@@ -390,6 +392,15 @@ class FetchRSSBatch(webapp2.RequestHandler):
 			val = memcache.get(fetch_key(id))
 			if val == None:
 				entry.get_or_insert(id)
+			#logging.info('INDEXING %s in place' % id)
+			b = is_interleaved_body(entry.desc.decode('utf-8'))
+			if b:
+				logging.info('bad : %s' % b)
+				bad = RSSBadEntry.get_or_insert(id, 
+												url=entry.link.decode('utf-8'), 
+												desc=entry.desc.decode('utf-8'), 
+												bad=b, 
+												date=entry.published_parsed)
 		#db.put(entries)
 		#self.redirect('/')
 		
@@ -448,6 +459,10 @@ class FetchRSS(webapp2.RequestHandler):
 				date = day_date(datetime.datetime.now())
 		datestr = "%s.%s.%s" % (date.day, date.month, date.year)
 		self.fetch(datestr)
+		mc_key = bad_entries_mc_key(date)
+		memcache.delete(mc_key)
+		keyname = str(date)
+		IndexedDate.get_or_insert(keyname, date=date)
 		self.redirect('/admin_')
 		
 
