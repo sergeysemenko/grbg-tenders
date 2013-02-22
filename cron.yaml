@@ -9,8 +9,8 @@ cron:
 
 - description: backwards fetching job
   url: /admin_fetch_rss?date=backwards
-  schedule: every 10 minutes synchronized
+  schedule: every 40 minutes synchronized
 
 - description: backwards indexing job
   url: /admin_index_rss_entries?date=backwards
-  schedule: every 20 minutes synchronized
+  schedule: every 40 minutes synchronized
