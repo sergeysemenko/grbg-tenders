@@ -9,7 +9,7 @@ threadsafe: true
 handlers:
 
 - url: /admin_.*
-  script: helloworld.app
+  script: main.app
   login: admin
   auth_fail_action: redirect
 
@@ -22,7 +22,7 @@ handlers:
 
   
 - url: /.*
-  script: helloworld.app
+  script: main.app
 
 
 
