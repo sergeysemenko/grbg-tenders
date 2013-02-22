@@ -602,7 +602,7 @@ class BadRSSPrinter(FrontEnd):
 		num_links = len(entries)
 		msg = ''
 		if num_links == 0:
-			msg = "<i> probably we haven't indexed this date yet </i>"
+			msg = ""
 		template_values = {
 			'num_links' : num_links,
 			'entries'	: entries,
