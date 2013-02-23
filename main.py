@@ -585,30 +585,44 @@ class TestCron(webapp2.RequestHandler):
 from google.appengine.api import mail
 from google.appengine.api import app_identity
 
-class MsgHandler(webapp2.RequestHandler):
-	def post(self):
-		user = users.get_current_user()
-		if user is None:
-			  login_url = users.create_login_url(self.request.path)
-			  self.redirect(login_url)
-			  return
+class MsgHandler(FrontEnd):
+	def get(self):
+		template = jinja_environment.get_template('contact.html')
+		body = template.render({})
+		self.render_page(body)
 		
-		content = self.request.get('message')
+	def get_escaped(self, param):
+		content = self.request.get(param)
 		template = jinja_environment.get_template('mail.html')
-		escaped = template.render({'content': content})
+		return template.render({'content': content})
+		
+	def post(self):
+# 		user = users.get_current_user()
+# 		if user is None:
+# 			  login_url = users.create_login_url(self.request.path)
+# 			  self.redirect(login_url)
+# 			  return
+		
+		name = self.get_escaped('name')
+		email = self.get_escaped('email')
+		if not mail.is_email_valid(email):
+			email = 'unknown@mail.com'
+		message = self.get_escaped('message')
 		
 		appid = app_identity.get_application_id()
-		subject = 'Contact message received at %s' % appid
+		subject = 'Contact message received at %s from %s' % (appid, name)
 		
-		mail.send_mail_to_admins(user.nickname(), subject, escaped, {})
+		mail.send_mail_to_admins(sender=email, subject=subject, body=message)
 		self.redirect('/')
+	
+		
 		
 
 app = webapp2.WSGIApplication([('/', MainPage),
 							   ('/admin_rss_entry', RSSEntryPrinter),
 							   ('/admin_', AdminPage),
 							   ('/bad', BadRSSPrinter),
-							   ('/msg', MsgHandler),
+							   ('/contact', MsgHandler),
 							   ('/admin_clear_rss_index', ClearRSSIndex),
                                ('/admin_index_rss_entries', IndexRSSEntries),
                                ('/admin_add_index_date', AddIndexeddate),
