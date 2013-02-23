@@ -505,7 +505,7 @@ def parse_offset(offset):
 	try:
 		offset = int(offset)
 	except:
-		logging.warning('bad offset, assuming 0')
+		logging.info('bad offset, assuming 0')
 		offset = 0
 	return offset
 	
@@ -612,7 +612,7 @@ class BadRSSPrinter(FrontEnd):
 		try:
 			date = datetime.datetime.strptime(date, '%d.%m.%Y')
 		except:
-			logging.warning('bad date in request, assuming current')
+			logging.info('bad date in request, assuming current')
 			date = None
 		offset = parse_offset(self.request.get('offset'))		
 		entries = self.get_bad_entries(date, offset)
