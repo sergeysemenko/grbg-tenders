@@ -460,26 +460,20 @@ class BadRSSPrinter(FrontEnd):
 		cursor = self.get_cursor(id)
 		return list(query.run(limit=retreive_limit, start_cursor=cursor))
 	
-	def gen_anchor(self, idx):
-		offset = idx * printer_limit
-		tmpl = '<a href="/bad?offset=%d" class="btn btn-primary btn-small"> %d </a>'
-		return  tmpl % (offset, idx)
-		
-	
-	def gen_pages_anchors(self, offset, num_links):
+	def gen_pages(self, offset, num_links):
 		idx = 0
-		anchors = []
-		max_anchors = 16
+		pages = []
+		max_pages = 16
 		if num_links == 0:
-			#we don't want to gen anchors for pages upto offset because it might have
-			#been set to a huge value
-			return ''
-		while idx * printer_limit < offset + num_links:
-			anchor = self.gen_anchor(idx)
-			anchors.append(anchor)
-			idx += 1
-		anchors = anchors[-max_anchors:]
-		return '<div style="text-align:right"> %s</div>' % '\n'.join(anchors)	
+			return []
+		for i in range(0, (offset + num_links) / printer_limit):
+			pages.append((i * printer_limit, i))
+		#if we have too much pages, hide first ones
+		pages = pages[-max_pages:]
+		#add pretty arrow
+		if num_links == retreive_limit:
+			pages[-1] = (pages[-1][0], '>')
+		return pages
 			
 	def render_entries(self, date, offset):
 		msg = ''
@@ -493,14 +487,14 @@ class BadRSSPrinter(FrontEnd):
 			query = query = db.GqlQuery('SELECT * FROM RSSBadEntry ORDER BY date DESC')
 
 		entries = self.retreive_with_offset(query, offset)
-		msg = self.gen_pages_anchors(offset, len(entries))
+		pages = self.gen_pages(offset, len(entries))
 		entries = entries[0:printer_limit]
 				
 		template_values = {
 			'num_links' 			: len(entries),
 			'entries'				: entries,
 			'enumerated_entries'	: enumerate(entries),
-			'msg'       			: msg,
+			'pages'       			: pages,
 		} 
 		
 		template = jinja_environment.get_template('boot2_bad.html')

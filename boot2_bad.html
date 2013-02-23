@@ -34,5 +34,11 @@
          	</tbody>
     </table>
     
-		{{msg}}
+	<div class="pagination pagination-right"> 
+		<ul>
+		{% for offset,text in pages %}
+			<li><a href="/bad?offset={{offset}}"> {{text}} </a></li>
+		{% endfor %}
+		</ul>
+	</div>
       <hr>
