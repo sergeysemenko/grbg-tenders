@@ -6,5 +6,5 @@ cron:
 
 - description: backwards fetching job
   url: /admin_fetch_rss?date=backwards
-  schedule: every 10 minutes synchronized
+  schedule: every 2 minutes synchronized
 

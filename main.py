@@ -315,7 +315,11 @@ def parse_rss_chunk(chunk):
 	entry = {'link' : None, 'content:encoded' : None, 'pubDate' : None}
 	for tag in entry.keys():
 		if tag in chunk:
-			val = parse_tag_chunk(tag, chunk)
+			try:
+				val = parse_tag_chunk(tag, chunk)
+			except:
+				logging.info('PARSE_RSS_CHUNK_ERROR: tag%s \nchunk:%s' % (tag, chunk))
+				return None
 			entry[tag] = val
 	return entry
 
@@ -365,8 +369,9 @@ def fetch_rss_by_range2(datestr, end, start):
 	for chunk in chunks:
 		if 'pubDate' in chunk:
 			edict = parse_rss_chunk(chunk)
-			entry = ParsedRSSEntry(edict)
-			entries.append(entry)
+			if edict:	
+				entry = ParsedRSSEntry(edict)
+				entries.append(entry)
 	return entries
 
 def day_date(date):
