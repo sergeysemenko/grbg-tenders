@@ -12,6 +12,7 @@ from google.appengine.api import memcache
 from time import mktime
 from google.appengine.api import urlfetch
 import HTMLParser
+import urllib2
 
 #import feedparser
 
@@ -22,71 +23,13 @@ jinja_environment = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
 
 
-# class Greeting(db.Model):
-#   """Models an individual Guestbook entry with an author, content, and date."""
-#   author = db.StringProperty()
-#   content = db.StringProperty(multiline=True)
-#   date = db.DateTimeProperty(auto_now_add=True)
-# 
-# 
-# def guestbook_key(guestbook_name=None):
-#   """Constructs a Datastore key for a Guestbook entity with guestbook_name."""
-#   return db.Key.from_path('Guestbook', guestbook_name or 'default_guestbook')
 
-import urllib2
 
 def get_content(url):
 	opener = urllib2.build_opener()
 	opener.addheaders = [('User-agent', 'Mozilla/5.0'), ("Accept-Encoding", 'UTF-8')]
 	response = opener.open(url)
 	return response.read()
-
-def get_num_links(lines):
-	num_mark = 'class="active"'
-	for i,line in enumerate(lines):
-		if num_mark in line:
-			num_links = lines[i+2].strip().strip(')').split('(')[1]
-			num_links = num_links.decode('utf-8')
-			num_links = int(''.join(num_links.split()))
-			return num_links
-	return None
-
-def get_links(lines):
-	links = []
-	mark = 'dropTop'
-	for i,line in enumerate(lines):
-		if mark in line:
-			href = lines[i+2]
-			link = href.split('"')[1]
-			links.append(base_url + link)
-	return links
-
-def get_lines(url):
-	opener = urllib2.build_opener()
-	opener.addheaders = [('User-agent', 'Mozilla/5.0'), ("Accept-Encoding", 'UTF-8')]
-	response = opener.open(url)
-	return response.readlines()
-
-myurl = 'http://zakupki.gov.ru/223/purchase/public/notification/search.html?purchase=&startingContractPriceFrom=&okvedCode=&okvedText=&customerOrgName=&searchWord=&startingContractPriceTo=&purchaseStages=APPLICATION_FILING&purchaseStages=COMMISSION_ACTIVITIES&purchaseStages=PLACEMENT_COMPLETE&customerOrgId=&customerOrgId=&okdpId=&purchaseMethodName=%3C%D0%92%D1%81%D0%B5+%D1%81%D0%BF%D0%BE%D1%81%D0%BE%D0%B1%D1%8B%3E&activeTab=0&okvedId=&okdpText=&okdpCode=&_purchaseStages=on&_purchaseStages=on&_purchaseStages=on&_purchaseStages=on&publishDateTo=&organName=&organName=&organName=&purchaseMethodId=&contractName=&fullTextSearchType=INFOS_AND_DOCUMENTS'
-base_url = 'http://zakupki.gov.ru'
-
-def get_order_str(lines, i):
-	line = ''
-	res = []
-	# TODO: parse html properly
-	while '</span>' not in line:
-		i = i + 1
-		line = lines[i].strip()
-		if '<' not in line and line != '':
-			res.append(line.strip())
-	return "\n".join(res)
-
-def get_order(url):
-	lines = get_lines(url)
-	mark = 'Наименование закупки'
-	for i,line in enumerate(lines):
-		if mark in line:
-			return get_order_str(lines, i)
 
 def is_cyrillic(word):
 	for c in word:
@@ -199,31 +142,11 @@ class FrontEnd(webapp2.RequestHandler):
 		footer = self.render_footer()
 		self.response.out.write(header + body + footer )
 		
-
 class MainPage(FrontEnd):
 	def get(self):
-		#         guestbook_name=self.request.get('guestbook_name')
-		#         greetings_query = Greeting.all().ancestor(
-		#             guestbook_key(guestbook_name)).order('-date')
-		#         greetings = greetings_query.fetch(10)
-		
 		template = jinja_environment.get_template('boot2_body.html')
 		body = template.render({})
 		self.render_page(body)
-
-class OrderLink(db.Model):
-    url = db.StringProperty(required=True)
-
-class OrderSnippet(OrderLink):
-    snippet = db.TextProperty(required=True)
-    
-class BadSnippet(OrderSnippet):
-    bad = db.StringProperty(required=True)
-    
-    def decorated(self):
-    	#return self.snippet#.decode('utf-8').encode('utf-8')
-    	dec = decorate_body(self.snippet)
-    	return dec.decode('utf-8')
 
 class IndexedDate(db.Model):
 	date = db.DateTimeProperty(required=True)
@@ -259,87 +182,33 @@ date_params_tmpl = '&publishDateFrom=%s&publishDateTo=%s&'
 
 init_url = 'http://zakupki.gov.ru/223/purchase/public/notification/search.html?'
 
-
-def add_rss_entries(cache, entries):
-	for entry in entries:
-		if entry.link not in cache:
-			cache[entry.link] = entry
-
-def fetch_rss_by_range(datestr, end, start):
-	price_params = price_params_tmpl % (end, start)
-	date_params = date_params_tmpl % (datestr, datestr)
-	
-	feedinput = urlfetch.fetch(rss_url + price_params + date_params + static_params)
-	
-	feed = feedparser.parse(feedinput.content)
-	#feed = feedparser.parse( rss_url + price_params + date_params + static_params)
-	return feed.entries
-
 # there is for sure less than 200 entries after price_tail	
 price_tail = 6100000
 
-def fetch_rss(datestr):
-	cache = {}
-	date_params = date_params_tmpl % (datestr, datestr)
-	lines = get_lines(init_url + date_params + static_params)
-		
-	num_links = get_num_links(lines)
-	
-	range = 100000
-	bigrange = range*5
-	start = 0
-	end = start + range
-	toohigh = 1000000
-	zcount = 3
-	maxz = 10
-	while len(cache) < num_links:
-		cur_range = range
-		if start > toohigh:
-			cur_range = bigrange
-		entries = fetch_rss_by_range(datestr, start + cur_range, start)
-		add_rss_entries(cache, entries)
-		if len(entries) == 0:
-			zcount += 1
-			if zcount > maxz:
-				break
-		start +=  cur_range
-	return cache
+rss_desc_tag = u'Наименование закупки:'
 
-def parse_tag_chunk(tag, text):
-	chunks = text.split('<%s>' % tag)
-	val = chunks[1].split('</%s>' % tag)[0]
-	return val
-	
-
-def parse_rss_chunk(chunk):
-	entry = {'link' : None, 'content:encoded' : None, 'pubDate' : None}
-	for tag in entry.keys():
-		if tag in chunk:
-			try:
-				val = parse_tag_chunk(tag, chunk)
-			except:
-				logging.info('PARSE_RSS_CHUNK_ERROR: tag%s \nchunk:%s' % (tag, chunk))
-				return None
-			entry[tag] = val
-	return entry
-
-def decode_rss_content(content):
+def decode_rss_content(content, tag):
+	"""
+	@param content: content:encoded part of the rss item, raw string
+	@param tag: the tag in the content:encoded part like Наименование закупки:,
+				unicode() object
+	"""
 	h = HTMLParser.HTMLParser()
 	content = content.encode('utf-8')
-	tender = content.split(u'Наименование закупки:'.encode('utf-8'))[1]
+	tender = content.split(tag.encode('utf-8'))[1]
 	tender = h.unescape(tender.decode('utf-8')).encode('utf-8')
 	tender = tender.split('>')[1]
 	tender = tender.split('<')[0]
 	return tender
 
-def get_desc_rss(entry):
-	content = entry['content'][0]['value']
-	return decode_rss_content(content)
-
 class ParsedRSSEntry:
 	def __init__(self, edict):
+		"""
+		@param edict: {'link' : raw_str, 'content:encoded' : raw_str, 'pubDate' : raw_str}
+					  generated by parse_rss_chunk()
+		"""
 		self.link = edict['link'].encode('utf-8')
-		self.desc = decode_rss_content(edict['content:encoded'])
+		self.desc = decode_rss_content(edict['content:encoded'], rss_desc_tag)
 		self.published = edict['pubDate'].encode('utf-8')
 		self.published_parsed = datetime.datetime.strptime(self.published, 
 												  '%a, %d %b %Y %H:%M:%S %Z')
@@ -359,7 +228,43 @@ def keyname_from_link(link):
 	id = pcs[1].split('&')[0]
 	return str(int(id))
 
+def parse_tag_chunk(tag, text):
+	"""
+	@param tag: raw_str, xml tag like link or pubDate
+	@param text: raw_str, text to search tag 
+	
+	@return tag_value: raw_str, content of tag (xmlNode.text)
+	"""
+	chunks = text.split('<%s>' % tag)
+	val = chunks[1].split('</%s>' % tag)[0]
+	return val
+	
+
+def parse_rss_chunk(chunk):
+	"""
+	@param chunk: raw_str, everything between <item> tags in rss stream
+	
+	@return edict: {'link' : raw_str, 'content:encoded' : raw_str, 'pubDate' : raw_str}
+	"""
+	entry = {'link' : None, 'content:encoded' : None, 'pubDate' : None}
+	for tag in entry.keys():
+		if tag in chunk:
+			try:
+				val = parse_tag_chunk(tag, chunk)
+			except:
+				logging.info('PARSE_RSS_CHUNK_ERROR: tag%s \nchunk:%s' % (tag, chunk))
+				return None
+			entry[tag] = val
+	return entry
+
 def fetch_rss_by_range2(datestr, end, start):
+	"""
+	@param datestr: raw_str, dd.mm.yyyy
+	@param end: raw_str or int, upper price bound of tenders to fetch
+	@param start: raw_str or int, lower price bound of tenders to fetch
+	
+	@return list( ParsedRSSEntry ): rss items received from rss request
+	"""
 	price_params = price_params_tmpl % (end, start)
 	date_params = date_params_tmpl % (datestr, datestr)
 	myurl = rss_url + price_params + date_params + static_params
