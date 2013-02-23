@@ -612,7 +612,10 @@ class MsgHandler(FrontEnd):
 		appid = app_identity.get_application_id()
 		subject = 'Contact message received at %s from %s' % (appid, name)
 		
-		mail.send_mail_to_admins(sender=email, subject=subject, body=message)
+		try:
+			mail.send_mail_to_admins(sender=email, subject=subject, body=message)
+		except:
+			logging.info("email failed with %s %s %s " %(name, email, message))
 		self.redirect('/')
 	
 		
