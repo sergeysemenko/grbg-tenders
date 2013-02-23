@@ -469,6 +469,7 @@ class BadRSSPrinter(FrontEnd):
 	def gen_pages_anchors(self, offset, num_links):
 		idx = 0
 		anchors = []
+		max_anchors = 16
 		if num_links == 0:
 			#we don't want to gen anchors for pages upto offset because it might have
 			#been set to a huge value
@@ -477,7 +478,8 @@ class BadRSSPrinter(FrontEnd):
 			anchor = self.gen_anchor(idx)
 			anchors.append(anchor)
 			idx += 1
-		return '<ul style="text-align:right"> %s</ul>' % '\n'.join(anchors)	
+		anchors = anchors[-max_anchors:]
+		return '<div style="text-align:right"> %s</div>' % '\n'.join(anchors)	
 			
 	def render_entries(self, date, offset):
 		msg = ''
@@ -495,9 +497,10 @@ class BadRSSPrinter(FrontEnd):
 		entries = entries[0:printer_limit]
 				
 		template_values = {
-			'num_links' : len(entries),
-			'entries'	: entries,
-			'msg'       : msg,
+			'num_links' 			: len(entries),
+			'entries'				: entries,
+			'enumerated_entries'	: enumerate(entries),
+			'msg'       			: msg,
 		} 
 		
 		template = jinja_environment.get_template('boot2_bad.html')
@@ -588,7 +591,7 @@ class TestCron(webapp2.RequestHandler):
 from google.appengine.api import mail
 from google.appengine.api import app_identity
 
-class InviteFriendHandler(webapp2.RequestHandler):
+class MsgHandler(webapp2.RequestHandler):
 	def post(self):
 		user = users.get_current_user()
 		if user is None:
@@ -604,12 +607,14 @@ class InviteFriendHandler(webapp2.RequestHandler):
 		subject = 'Contact message received at %s' % appid
 		
 		mail.send_mail_to_admins(user.nickname(), subject, escaped, {})
+		self.redirect('/')
 		
 
 app = webapp2.WSGIApplication([('/', MainPage),
 							   ('/admin_rss_entry', RSSEntryPrinter),
 							   ('/admin_', AdminPage),
 							   ('/bad', BadRSSPrinter),
+							   ('/msg', MsgHandler),
 							   ('/admin_clear_rss_index', ClearRSSIndex),
                                ('/admin_index_rss_entries', IndexRSSEntries),
                                ('/admin_add_index_date', AddIndexeddate),
