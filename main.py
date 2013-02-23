@@ -464,118 +464,15 @@ class FetchRSS(webapp2.RequestHandler):
 				date = day_date(datetime.datetime.now())
 		datestr = "%s.%s.%s" % (date.day, date.month, date.year)
 		self.fetch(datestr)
-		mc_key = bad_entries_mc_key(date)
-		memcache.delete(mc_key)
+		memcache.flush_all()
 		keyname = str(date)
 		IndexedDate.get_or_insert(keyname, date=date)
 		self.redirect('/admin_')
-		
-
-class IndexHandler(webapp2.RequestHandler):
-	def get(self):
-		keyword = ''
-		lines = get_lines(init_url_tmpl %  keyword)
-		
-		num_links = get_num_links(lines)
-		num_pages = (num_links / 10) + (num_links % 10 != 0) 
-		logging.info('indexhandler found %s pages for %s' % (num_pages, keyword)) 
-		for page in range(1, num_pages+1):
-			logging.info('indexhandler with page %s' % page)
-			# Add the task to the default queue.
-			taskqueue.add(url='/admin_fetch_addresses', params={'page': page})
-		
-		self.redirect('/')
-
-class FetchHandler(webapp2.RequestHandler):
-	def get(self):
-		logging.info('fetchhandler started ')
-		query = OrderLink.all()
-		query.order('url')
-		links = list(query)
-		 
-		for link in links:
-			# Add the task to the default queue.
-			keyname = "%s" % link.url
-			logging.info('checking %s' % keyname)
-			taskqueue.add(url='/admin_fetch_snippet', params={'page': link.url})
-		
-		self.redirect('/')
-
-af_url = 'http://zakupki.gov.ru/223/purchase/public/notification/search.html?purchase=&startingContractPriceFrom=&okvedCode=&okvedText=&customerOrgName=&searchWord=&startingContractPriceTo=&purchaseStages=APPLICATION_FILING&purchaseStages=COMMISSION_ACTIVITIES&purchaseStages=PLACEMENT_COMPLETE&customerOrgId=&customerOrgId=&okdpId=&purchaseMethodName=%3C%D0%92%D1%81%D0%B5+%D1%81%D0%BF%D0%BE%D1%81%D0%BE%D0%B1%D1%8B%3E&activeTab=0&okvedId=&okdpText=&okdpCode=&_purchaseStages=on&_purchaseStages=on&_purchaseStages=on&_purchaseStages=on&publishDateTo=&organName=&organName=&organName=&purchaseMethodId=&contractName=&fullTextSearchType=INFOS_AND_DOCUMENTS'
-
-
-class AddressFetcher(webapp2.RequestHandler):
-	def post(self):
-		datestr = '20.02.2013'
-		myurl = 'http://zakupki.gov.ru/223/purchase/public/notification/search.html?purchase=&startingContractPriceFrom=&okvedCode=&okvedText=&customerOrgName=&searchWord=&startingContractPriceTo=&purchaseStages=APPLICATION_FILING&purchaseStages=COMMISSION_ACTIVITIES&purchaseStages=PLACEMENT_COMPLETE&customerOrgId=&customerOrgId=&okdpId=&purchaseMethodName=%3C%D0%92%D1%81%D0%B5+%D1%81%D0%BF%D0%BE%D1%81%D0%BE%D0%B1%D1%8B%3E&activeTab=0&okvedId=&okdpText=&okdpCode=&_purchaseStages=on&_purchaseStages=on&_purchaseStages=on&_purchaseStages=on&publishDateTo=&organName=&organName=&organName=&purchaseMethodId=&contractName=&fullTextSearchType=INFOS_AND_DOCUMENTS'
-		datestr = '20.02.2013'
-		page = self.request.get('page')
-		logging.info('af with page %s' % page)
-		params = '&d-3771889-p=%d&publishDateFrom=%s' % (int(page), datestr)
-		logging.info('params %s' % params)
-		lines = get_lines(myurl + params)
-		
-		
-		links = get_links(lines)
-		links.sort()
-		
-		logging.info('af with #links %s' % len(links))
-		for link in links:
-			keyname = link
-			s = OrderLink.get_or_insert(keyname, url=link)
-		#db.run_in_transaction(txn)
 
 
 import xml.dom.minidom
 from xml.dom.minidom import Node
 
-
-# def get_snippets(body):
-# 	body = body.encode('utf-8')
-# 	dom = xml.dom.minidom.parseString(body)
-# 	ps = dom.getElementsByTagName('p')
-# 	snippets = []
-# 	for p in ps:
-# 		a = p.getElementsByTagName('a')
-# 		i = p.getElementsByTagName('i')
-# 		sn = (a.nodeValue, i.nodeValue)
-# 		snippets.append(sn)
-# 	return snippets
-
-# <p>
-#     	<a href="http://zakupki.gov.ru/223/purchase/public/purchase/info/common-info.html?purchaseId=100643&&purchaseMethodType=is"  target="_blank">http://zakupki.gov.ru/223/purchase/public/purchase/info/common-info.html?purchaseId=100643&&purchaseMethodType=is</a>
-#     	<br>
-#     	<i>Организация услуг питания на территории гостиницы “Radisson Blu Resort &amp; Congress Centre, Sochi”</i>
-#     	</p>
-
-def get_snippet(p):
-	chunks = p.split('<i>')
-	logging.info(chunks)
-	desc = chunks[1].split('</i>')[0]
-	link = chunks[0].split('"')[1]
-	return (link, desc)
-
-def get_snippets(body):
-	ps = body.split('<p>')
-	res =[]
-	for p in ps:
-		if '</p>' in p:
-			res.append(get_snippet(p))
-	return res
-
-class Fetcher(webapp2.RequestHandler):
-	def post(self):
-		page = self.request.get('page')
-		keyname = page
-		logging.info('fetcher with page %s' % page)
-		order_str = get_order(page).decode('utf-8')
-		
-		logging.info('fetcher with order %s' % order_str)
-		
-		s = OrderSnippet.get_or_insert(keyname, url=page, snippet=order_str)
-		#db.run_in_transaction(txn)	
-
-myurl = 'http://zakupki.gov.ru/223/purchase/public/purchase/info/common-info.html?purchaseId=84433&&purchaseMethodType=is'
 
 class ClearRSSIndex(webapp2.RequestHandler):
 	def get(self):
@@ -585,9 +482,6 @@ class ClearRSSIndex(webapp2.RequestHandler):
 		logging.info('clear: deleting %d bad entries' % len(entries))
 		db.delete(entries)
 		self.redirect('/')
-			
-		
-		
 
 class RSSEntryPrinter(webapp2.RequestHandler):
 	def get(self):
@@ -606,42 +500,105 @@ class RSSEntryPrinter(webapp2.RequestHandler):
 
 
 exptime = 3600*24
+
+def parse_offset(offset):
+	try:
+		offset = int(offset)
+	except:
+		logging.warning('bad offset, assuming 0')
+		offset = 0
+	return offset
 	
-def bad_entries_mc_key(date):
-	return "bad_entries_%02d%02d%04d" % (date.day, date.month, date.year)
+
+def bad_entries_mc_key(date, offset=None):
+	key = "bad_entries_"
+	if date:
+		key += '%02d%02d%04d' % (date.day, date.month, date.year)
+	if offset:
+		key += '_offset_%d' % offset
+	return key
+
+printer_limit = 4
+retreive_limit = printer_limit * 3
 
 class BadRSSPrinter(FrontEnd):
-	def get_bad_entries(self, date):
-		key = bad_entries_mc_key(date)
+	
+	def get_cursor_key(self, id):
+		return 'BadRSSPrineter_cursor_key_%s'
+	
+	def get_cursor(self, id):
+		key = self.get_cursor_key(id)
+		cursor = memcache.get(key)
+		return cursor
+	
+	def get_bad_entries(self, date, offset):
+		key = bad_entries_mc_key(date, offset)
 		logging.info('key %s' % key)
 		entries = memcache.get('%s' % key)
 		if entries is not None:
 			logging.info('found key %s' % key)
 			return entries
 		else:
-			entries = self.render_entries(date)
+			entries = self.render_entries(date, offset)
 			logging.info('missed key %s' % key)
 			if not memcache.add(key, entries, time=exptime):
 				logging.error('Memcache set failed.')
 			return entries
-			
-	def render_entries(self, date):
-		# query = RSSBadEntry.all()
-# 		query.filter("date =", date)
-		end = date + datetime.timedelta(days=1)
-		logging.info('date start: %s' % date)
-		logging.info('date end: %s' % end)
-		query = db.GqlQuery('SELECT * FROM RSSBadEntry WHERE date >= :1 AND date <= :2',
-                date, end)
-		#query.order('url')
-		entries = list(query)
+	
+	def retreive_with_offset(self, query, offset):
+		#cursor can only implement "view-next-page" func without prev page
+		#this is not convenient.
+		#offset however just discards the entries, they are still retrieved
+		#for now we are willing to pay 'offset' price
+		#cursor = self.get_cursor()
 		
-		num_links = len(entries)
-		msg = ''
+		#retrive one limit more to know if we have links for next page
+		entries = list(query.run(limit=retreive_limit, offset=offset))
+		return entries
+		
+	def retreive_with_cursor(self, query, id):
+		#cursor can only implement "view-next-page" func without prev page
+		#this is not convenient.
+		#offset however just discards the entries, they are still retrieved
+		#for now we are willing to pay 'offset' price
+		cursor = self.get_cursor(id)
+		return list(query.run(limit=retreive_limit, start_cursor=cursor))
+	
+	def gen_anchor(self, idx):
+		offset = idx * printer_limit
+		return '<a href="/bad?offset=%d" class="active"> <b>%d</b> </a>' % (offset, idx)
+		
+	
+	def gen_pages_anchors(self, offset, num_links):
+		idx = 0
+		anchors = []
 		if num_links == 0:
-			msg = ""
+			#we don't want to gen anchors for pages upto offset because it might have
+			#been set to a huge value
+			return ''
+		while idx * printer_limit < offset + num_links:
+			anchor = self.gen_anchor(idx)
+			anchors.append(anchor)
+			idx += 1
+		return '<ul style="text-align:right"> %s</ul>' % '\n'.join(anchors)	
+			
+	def render_entries(self, date, offset):
+		msg = ''
+		if date:
+			end = date + datetime.timedelta(days=1)
+			logging.info('date start: %s' % date)
+			logging.info('date end: %s' % end)
+			query = db.GqlQuery('SELECT * FROM RSSBadEntry WHERE date >= :1 AND date <= :2',
+					date, end)
+		else:
+			query = query = db.GqlQuery('SELECT * FROM RSSBadEntry')
+
+		entries = self.retreive_with_offset(query, offset)
+		msg = self.gen_pages_anchors(offset, len(entries))
+		entries = entries[0:printer_limit]
+				
 		template_values = {
-			'num_links' : num_links,
+			'num_links' : len(entries),
 			'entries'	: entries,
 			'msg'       : msg,
 		} 
@@ -656,9 +613,9 @@ class BadRSSPrinter(FrontEnd):
 			date = datetime.datetime.strptime(date, '%d.%m.%Y')
 		except:
 			logging.warning('bad date in request, assuming current')
-			date = day_date(datetime.datetime.now())
-				
-		entries = self.get_bad_entries(date)
+			date = None
+		offset = parse_offset(self.request.get('offset'))		
+		entries = self.get_bad_entries(date, offset)
 		self.render_page(entries)
 
 
@@ -715,8 +672,7 @@ class IndexRSSEntries(webapp2.RequestHandler):
 # 				daydate = datetime.datetime(year=entry.date.year, month=entry.date.month, 
 # 								   day=entry.date.day)
 				bad = RSSBadEntry.get_or_insert(keyname, url=entry.url, desc=entry.desc, bad=b, date=entry.date)
-		mc_key = bad_entries_mc_key(date)
-		memcache.delete(mc_key)
+		memcache.flush_all()
 		keyname = str(date)
 		IndexedDate.get_or_insert(keyname, date=date)
 		
@@ -758,13 +714,8 @@ app = webapp2.WSGIApplication([('/', MainPage),
 							   ('/admin_', AdminPage),
 							   ('/bad', BadRSSPrinter),
 							   ('/admin_clear_rss_index', ClearRSSIndex),
-                               #('/sign', Guestbook),
-                               ('/admin_doindex', IndexHandler),
-                               ('/admin_fetch_addresses', AddressFetcher),
-                               ('/admin_fetch_snippet', Fetcher),
                                ('/admin_index_rss_entries', IndexRSSEntries),
                                ('/admin_add_index_date', AddIndexeddate),
-                               ('/admin_fetch', FetchHandler),
                                ('/admin_test_cron', TestCron),
                                ('/admin_fetch_rss', FetchRSS),
                                ('/admin_fetch_rss_batch',FetchRSSBatch)],
