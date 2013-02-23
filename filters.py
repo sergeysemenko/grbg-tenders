@@ -1,4 +1,5 @@
 import unicodedata
+
 def is_cyrillic(word):
 	for c in word:
 		if 'CYRILLIC' not in unicodedata.name(c):
@@ -34,7 +35,8 @@ def is_latin_char(c):
 
 def filter(body):
 	filters = [is_interleaved_body]
-	for filter in filters :
-		bad =  filter(body)
+	for f in filters :
+		bad =  f(body)
 		if bad:
 			return bad
+			
