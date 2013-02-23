@@ -518,7 +518,7 @@ def bad_entries_mc_key(date, offset=None):
 		key += '_offset_%d' % offset
 	return key
 
-printer_limit = 4
+printer_limit = 10
 retreive_limit = printer_limit * 3
 
 class BadRSSPrinter(FrontEnd):
