@@ -13,7 +13,7 @@ from time import mktime
 from google.appengine.api import urlfetch
 import HTMLParser
 import urllib2
-
+import filters 
 #import feedparser
 
 import jinja2
@@ -31,43 +31,12 @@ def get_content(url):
     response = opener.open(url)
     return response.read()
 
-def is_cyrillic(word):
-    for c in word:
-        if 'CYRILLIC' not in unicodedata.name(c):
-            return False
-    return True
-    
-def is_latin(word):
-    for c in word:
-        if 'LATIN' not in unicodedata.name(c):
-            return False
-    return True
 
-def is_latin_cyrillic(word):
-    for c in word:
-        if 'LATIN' not in unicodedata.name(c) and 'CYRILLIC' not in unicodedata.name(c):
-            return False
-    return True
-
-def is_interleaved(word):
-    return is_latin_cyrillic(word) and not is_cyrillic(word) and not is_latin(word)
-
-def is_interleaved_body(body):
-    for word in body.split():
-        if is_interleaved(word):
-            return word
-    return None
-
-def is_cyrillic_char(c):
-    return 'CYRILLIC' in unicodedata.name(c)
-    
-def is_latin_char(c):
-    return 'LATIN' in unicodedata.name(c)
 
 def decorate(word):
     res = ''
     for c in word:
-        if is_latin_char(c):
+        if filters.is_latin_char(c):
             c = '<font color="red">%s</font>' % c
         res += c
     return res
@@ -76,7 +45,7 @@ def decorate_body(body):
     
     res = []
     for word in body.split():
-        if is_interleaved(word):
+        if filters.is_interleaved(word):
             word = decorate(word)
         res.append(word.encode('utf-8'))
     return " ".join(res)
@@ -315,7 +284,7 @@ class FetchRSSBatch(webapp2.RequestHandler):
             if val == None:
                 entry.get_or_insert(id)
             #logging.info('INDEXING %s in place' % id)
-            b = is_interleaved_body(entry.desc.decode('utf-8'))
+            b = filters.filter(entry.desc.decode('utf-8'))
             if b:
                 logging.info('bad : %s' % b)
                 bad = RSSBadEntry.get_or_insert(id, 
@@ -563,7 +532,7 @@ class IndexRSSEntries(webapp2.RequestHandler):
         entries = list(query)
         logging.info('start indexing %d entries' % len(entries))
         for entry in entries:
-            b = is_interleaved_body(entry.desc)
+            b = filters.filter(entry.desc)
             if b:
                 logging.info('bad : %s' % b)
                 keyname = keyname_from_link(entry.url)
