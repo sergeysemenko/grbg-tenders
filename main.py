@@ -166,11 +166,7 @@ class RSSBadEntry(RSSEntry):
 	def decorated(self):
 		dec = decorate_body(self.desc)
 		return dec.decode('utf-8')
-	
 
-url_tmpl = "http://zakupki.gov.ru/223/purchase/public/notification/search.html?publishDateFrom=20.02.2013&d-3771889-p=%s&purchase=%s&purchaseStages=APPLICATION_FILING&_purchaseStages=on&purchaseStages=COMMISSION_ACTIVITIES&_purchaseStages=on&_purchaseStages=on&purchaseStages=PLACEMENT_COMPLETE&_purchaseStages=on&organName=&fullTextSearchType=INFOS_AND_DOCUMENTS&activeTab=0"
-
-init_url_tmpl = "http://zakupki.gov.ru/223/purchase/public/notification/search.html?publishDateFrom=20.02.2013&purchase=%s&purchaseStages=APPLICATION_FILING&_purchaseStages=on&purchaseStages=COMMISSION_ACTIVITIES&_purchaseStages=on&_purchaseStages=on&purchaseStages=PLACEMENT_COMPLETE&_purchaseStages=on&organName=&fullTextSearchType=INFOS_AND_DOCUMENTS&activeTab=0"
 base_url = 'http://zakupki.gov.ru'
 
 
@@ -523,23 +519,6 @@ class BadRSSPrinter(FrontEnd):
 		entries = self.get_bad_entries(date, offset)
 		self.render_page(entries)
 
-
-# class Guestbook(webapp2.RequestHandler):
-#   def post(self):
-#     # We set the same parent key on the 'Greeting' to ensure each greeting is in
-#     # the same entity group. Queries across the single entity group will be
-#     # consistent. However, the write rate to a single entity group should
-#     # be limited to ~1/second.
-#     guestbook_name = self.request.get('guestbook_name')
-#     greeting = Greeting(parent=guestbook_key(guestbook_name))
-# 
-#     if users.get_current_user():
-#       greeting.author = users.get_current_user().nickname()
-# 
-#     greeting.content = self.request.get('content')
-#     greeting.put()
-#     self.redirect('/?' + urllib.urlencode({'guestbook_name': guestbook_name}))
-
 class IndexRSSEntries(webapp2.RequestHandler):
 
 	def get(self):
@@ -574,8 +553,6 @@ class IndexRSSEntries(webapp2.RequestHandler):
 			if b:
 				logging.info('bad : %s' % b)
 				keyname = keyname_from_link(entry.url)
-# 				daydate = datetime.datetime(year=entry.date.year, month=entry.date.month, 
-# 								   day=entry.date.day)
 				bad = RSSBadEntry.get_or_insert(keyname, url=entry.url, desc=entry.desc, bad=b, date=entry.date)
 		memcache.flush_all()
 		keyname = str(date)
