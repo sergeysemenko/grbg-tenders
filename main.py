@@ -230,6 +230,15 @@ def parse_tag_chunk(tag, text):
 	val = chunks[1].split('</%s>' % tag)[0]
 	return val
 	
+"""
+Malformed chunk example:
+PARSE_RSS_CHUNK_ERROR: tagcontent:encoded 
+chunk:&lt;br/&gt;&lt;b&gt;Заказчик:&amp;nbsp;&lt;/b&gt;Общество с ограниченной ответственностью "Агенда"&lt;br/&gt;&lt;b&gt;Способ размещения закупки:&amp;nbsp;&lt;/b&gt;Открытый конкурс в электронной форме&lt;br/&gt;&lt;b&gt;Дата публикации извещения:&amp;nbsp;&lt;/b&gt;05.02.2013&lt;br/&gt;</content:encoded>
+      <pubDate>Tue, 05 Feb 2013 12:27:39 GMT</pubDate>
+      <guid isPermaLink="false">910edfeb-b7e2-41dc-89ec-9a30ea72e5f6</guid>
+    </
+"""
+
 
 def parse_rss_chunk(chunk):
 	"""
@@ -237,16 +246,19 @@ def parse_rss_chunk(chunk):
 	
 	@return edict: {'link' : raw_str, 'content:encoded' : raw_str, 'pubDate' : raw_str}
 	"""
-	entry = {'link' : None, 'content:encoded' : None, 'pubDate' : None}
-	for tag in entry.keys():
-		if tag in chunk:
+	edict = {'link' : None, 'content:encoded' : None, 'pubDate' : None}
+	for tag in edict.keys():
+		if tag not in chunk:
+			logging.info('PARSE_RSS_CHUNK_WARNING: no tag%s in chunk:%s' % (tag, chunk))
+			return None
+		else:
 			try:
 				val = parse_tag_chunk(tag, chunk)
 			except:
 				logging.info('PARSE_RSS_CHUNK_ERROR: tag%s \nchunk:%s' % (tag, chunk))
 				return None
-			entry[tag] = val
-	return entry
+			edict[tag] = val
+	return edict
 
 def fetch_rss_by_range2(datestr, end, start):
 	"""
