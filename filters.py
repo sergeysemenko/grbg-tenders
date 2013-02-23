@@ -33,10 +33,9 @@ def is_cyrillic_char(c):
 def is_latin_char(c):
 	return 'LATIN' in unicodedata.name(c)
 
-def filter(body):
-	filters = [is_interleaved_body]
-	for f in filters :
+def scan(body):
+	filter_list = [is_interleaved_body]
+	for f in filter_list:
 		bad =  f(body)
 		if bad:
 			return bad
-			
