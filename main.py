@@ -167,16 +167,11 @@ class RSSBadEntry(RSSEntry):
 		dec = decorate_body(self.desc)
 		return dec.decode('utf-8')
 
-base_url = 'http://zakupki.gov.ru'
-
-
 rss_url = "http://zakupki.gov.ru/223/purchase/public/notice-search-rss.html?"
 static_params = "okvedText=&searchWord=&organName=&organName=&organName=&okdpText=&purchase=&activeTab=0&okdpId=&d-3771889-p=5&purchaseStages=APPLICATION_FILING&purchaseStages=COMMISSION_ACTIVITIES&purchaseStages=PLACEMENT_COMPLETE&fullTextSearchType=INFOS_AND_DOCUMENTS&customerOrgName=&customerOrgId=&customerOrgId=&purchaseMethodName=%3C%D0%92%D1%81%D0%B5%20%D1%81%D0%BF%D0%BE%D1%81%D0%BE%D0%B1%D1%8B%3E&okvedCode=&purchaseMethodId=&startingContractPriceFrom=&publishDateTo=&okdpCode=&publishDateFrom=21.02.2013&contractName=&startingContractPriceTo=&_purchaseStages=on&_purchaseStages=on&_purchaseStages=on&_purchaseStages=on&okvedId="
 
 price_params_tmpl = '&startingContractPriceTo=%s&startingContractPriceFrom=%s&'
 date_params_tmpl = '&publishDateFrom=%s&publishDateTo=%s&'
-
-init_url = 'http://zakupki.gov.ru/223/purchase/public/notification/search.html?'
 
 # there is for sure less than 200 entries after price_tail	
 price_tail = 6100000
@@ -467,7 +462,8 @@ class BadRSSPrinter(FrontEnd):
 	
 	def gen_anchor(self, idx):
 		offset = idx * printer_limit
-		return '<a href="/bad?offset=%d" class="active"> <b>%d</b> </a>' % (offset, idx)
+		tmpl = '<a href="/bad?offset=%d" class="btn btn-primary btn-small"> %d </a>'
+		return  tmpl % (offset, idx)
 		
 	
 	def gen_pages_anchors(self, offset, num_links):
@@ -589,7 +585,26 @@ class TestCron(webapp2.RequestHandler):
 		date = datetime.datetime.now()
 		logging.info('CRON JOB: date %s' % date)
 		
+from google.appengine.api import mail
+from google.appengine.api import app_identity
 
+class InviteFriendHandler(webapp2.RequestHandler):
+	def post(self):
+		user = users.get_current_user()
+		if user is None:
+			  login_url = users.create_login_url(self.request.path)
+			  self.redirect(login_url)
+			  return
+		
+		content = self.request.get('message')
+		template = jinja_environment.get_template('mail.html')
+		escaped = template.render({'content': content})
+		
+		appid = app_identity.get_application_id()
+		subject = 'Contact message received at %s' % appid
+		
+		mail.send_mail_to_admins(user.nickname(), subject, escaped, {})
+		
 
 app = webapp2.WSGIApplication([('/', MainPage),
 							   ('/admin_rss_entry', RSSEntryPrinter),
