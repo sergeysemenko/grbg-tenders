@@ -588,10 +588,10 @@ class BadRSSPrinter(FrontEnd):
 			end = date + datetime.timedelta(days=1)
 			logging.info('date start: %s' % date)
 			logging.info('date end: %s' % end)
-			query = db.GqlQuery('SELECT * FROM RSSBadEntry WHERE date >= :1 AND date <= :2',
+			query = db.GqlQuery('SELECT * FROM RSSBadEntry WHERE date >= :1 AND date <= :2 ORDER BY date DESC',
 					date, end)
 		else:
-			query = query = db.GqlQuery('SELECT * FROM RSSBadEntry')
+			query = query = db.GqlQuery('SELECT * FROM RSSBadEntry ORDER BY date DESC')
 
 		entries = self.retreive_with_offset(query, offset)
 		msg = self.gen_pages_anchors(offset, len(entries))
