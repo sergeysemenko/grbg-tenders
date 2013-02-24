@@ -4,7 +4,7 @@ import urllib2
 import logging
 import HTMLParser
 import core
-import models
+
 
 
 rss_url = "http://zakupki.gov.ru/223/purchase/public/notice-search-rss.html?"
@@ -55,23 +55,18 @@ class ParsedRSSEntry:
         self.link = edict['link'].encode('utf-8')
         self.content = edict['content:encoded']
         self.desc = decode_rss_content(self.content, rss_desc_tag)
-        #self.author = decode_rss_content(self.content, rss_author_tag)
+        self.author = decode_rss_content(self.content, rss_author_tag)
         self.published = edict['pubDate'].encode('utf-8')
         self.published_parsed = datetime.datetime.strptime(self.published, 
                                                   '%a, %d %b %Y %H:%M:%S %Z')
     
     def valid(self):
-        return self.desc != None #and self.author != None    
+        return self.desc != None and self.author != None    
     
     def __str__(self):
         return 'link: %s\n desc:%s\n published:%s\n published_parsed:%s' % (self.link, 
             self.desc, self.published, self.published_parsed)
     
-    
-    def get_or_insert(self, key):
-        return models.RSSEntry.get_or_insert(key, url=self.link.decode('utf-8'), 
-                                      desc=self.desc.decode('utf-8'), 
-                                      date=self.published_parsed)
 
 def parse_tag_chunk(tag, text):
     """

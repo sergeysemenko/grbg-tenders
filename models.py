@@ -12,6 +12,14 @@ class RSSEntry(db.Model):
     desc = db.TextProperty(required=True)
     date = db.DateTimeProperty(required=True)
     
+    @staticmethod
+    def insert_unique(key, parsed_rss_entry):
+        return RSSEntry.get_or_insert(
+        	key, 
+        	url=parsed_rss_entry.link.decode('utf-8'), 
+            desc=parsed_rss_entry.desc.decode('utf-8'), 
+            date=parsed_rss_entry.published_parsed)
+    
 
 class RSSBadEntry(RSSEntry):
     bad = db.StringProperty(required=True)

@@ -97,8 +97,7 @@ def fetch_key(id):
     return 'batch_fetch_key_%s' % id
 
 class FetchRSSBatch(webapp2.RequestHandler):
-        
-        
+           
     def post(self):
         datestr = self.request.get('date')
         start = self.request.get('start')
@@ -111,8 +110,7 @@ class FetchRSSBatch(webapp2.RequestHandler):
             id = rss.keyname_from_link(entry.link.decode('utf-8'))
             val = memcache.get(fetch_key(id))
             if val == None:
-                entry.get_or_insert(id)
-            #logging.info('INDEXING %s in place' % id)
+                models.RSSEntry.insert_unique(id, entry)
             b = filters.scan(entry.desc.decode('utf-8'))
             if b:
                 logging.info('bad : %s' % b)
@@ -121,13 +119,9 @@ class FetchRSSBatch(webapp2.RequestHandler):
                                                 desc=entry.desc.decode('utf-8'), 
                                                 bad=b, 
                                                 date=entry.published_parsed)
-        #db.put(entries)
-        #self.redirect('/')
-        
-        
-
         
 backwards_date = 'backwards'
+
 def get_prev_back_date():
     q = models.IndexedDate.all()
     q.order('date')
