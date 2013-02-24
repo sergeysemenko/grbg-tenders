@@ -35,7 +35,7 @@ def decode_rss_content(content, tag):
         value = value.split('<')[0]
     except:
         logging.error('PARSE_RSS_CONTENT_ERROR: content: %s \ntag: %s' % (content, 
-        			   tag.encode('utf-8')))
+                       tag.encode('utf-8')))
     return value
 
 class ParsedRSSEntry:
