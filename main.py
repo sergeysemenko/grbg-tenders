@@ -10,6 +10,7 @@ from google.appengine.api import users
 from google.appengine.api import memcache
 from time import mktime
 from google.appengine.api import urlfetch
+import msearch
 
 import rss
 import core
@@ -94,6 +95,9 @@ def day_date(date):
 def fetch_key(id):
     return 'batch_fetch_key_%s' % id
 
+rss_entry_index_name = 'RSSEntry_index'
+rss_bad_entry_index_name = 'RSSBadEntry_index'
+
 class FetchRSSBatch(webapp2.RequestHandler):
            
     def post(self):
@@ -118,12 +122,15 @@ class FetchRSSBatch(webapp2.RequestHandler):
             }
             val = memcache.get(fetch_key(id))
             if val == None:
-                models.insert_or_update(models.RSSEntry, id, **args)
+                dbentry = models.insert_or_update(models.RSSEntry, id, **args)
+                msearch.index_entry(dbentry, rss_entry_index_name)
             b = filters.scan(entry.desc.decode('utf-8'))
             if b:
                 logging.info('bad : %s' % b)
                 args['bad'] = b
                 bad = models.insert_or_update(models.RSSBadEntry, id, **args)
+                msearch.index_entry(dbentry, rss_bad_entry_index_name)
+
         
 backwards_date = 'backwards'
 
@@ -186,7 +193,7 @@ class FetchRSS(webapp2.RequestHandler):
 
 import xml.dom.minidom
 from xml.dom.minidom import Node
-
+import msearch
 
 class ClearRSSIndex(webapp2.RequestHandler):
     def get(self):
@@ -196,6 +203,7 @@ class ClearRSSIndex(webapp2.RequestHandler):
         logging.info('clear: deleting %d bad entries' % len(entries))
         db.delete(entries)
         self.redirect('/')
+
 
 class RSSEntryPrinter(webapp2.RequestHandler):
     def get(self):
@@ -441,8 +449,49 @@ class MsgHandler(FrontEnd):
         except:
             logging.info("email failed with %s %s %s " %(name, email, message))
         self.redirect('/')
-    
+
+
+class IndexBadEntries(webapp2.RequestHandler):
+    def get(self):
+        limit = 500
+        offset = 0
+        query = db.GqlQuery(
+                'SELECT * FROM RSSBadEntry ORDER BY date DESC')
+        entries = list(query.run(limit=limit, offset=offset))
+        logging.info('indexing %d entries' % len(entries))
+        for entry in entries:
+            msearch.index_entry(entry)
+        self.redirect('/')
+
+import HTMLParser
+
+class SearchPrinter(FrontEnd):
+    def render_search_results(self, query):
+        logging.info('searching for query: %s' % query)
+        logging.info('type q before: %s' % type(query))
+        #datestr = self.request.get('date')
+        #date = datetime.datetime.strptime(datestr, '%d.%m.%Y')
+        results = msearch.search_entries(query=query,
+            index_name=rss_entry_index_name)
+        count = len(results)
         
+        template_values = {
+            'count'     : count,
+            'results'   : results,
+        } 
+        template = jinja_environment.get_template('search_results.html')
+        return template.render(template_values)
+
+    def get(self):
+        search_results = ''
+        query = self.request.get('query')
+        if query:
+            search_results = self.render_search_results(query)
+        template = jinja_environment.get_template('search_box.html')
+        body = template.render({'search_results' : search_results})
+        self.render_page(body)
+
+               
         
 
 app = webapp2.WSGIApplication([('/', MainPage),
@@ -455,5 +504,7 @@ app = webapp2.WSGIApplication([('/', MainPage),
                                ('/admin_add_index_date', AddIndexeddate),
                                ('/admin_test_cron', TestCron),
                                ('/admin_fetch_rss', FetchRSS),
-                               ('/admin_fetch_rss_batch',FetchRSSBatch)],
+                               ('/admin_fetch_rss_batch',FetchRSSBatch),
+                               ('/admin_index', IndexBadEntries),
+                               ('/search', SearchPrinter)],
                               debug=True)

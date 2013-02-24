@@ -51,6 +51,7 @@ def txn(EClass, key_name, **kwargs):
     else:
         entity.update_from(**kwargs)
     entity.put()
+    return entity
 
 def insert_or_update(EClass, key_name, **kwargs):
     return db.run_in_transaction(txn, EClass, key_name, **kwargs)

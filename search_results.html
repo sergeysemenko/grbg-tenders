@@ -1,0 +1,51 @@
+
+
+      <hr>
+
+      <p>
+        <b> Found {{count}} results: </b>
+      </p>
+     <table class="table table-hover table-bordered " >
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th>Author</th>
+                  <th>Date</th>
+                  <th>Link</th>
+                </tr>
+              </thead>
+              <tbody >
+            
+    {%for entry in results %}
+    	<tr>
+    		<td>
+    			
+    				{{entry.desc()|safe}}
+    			
+    		</td>
+      <td>
+        {{entry.author()}}
+      </td>
+			<td>
+				{{'%s.%s.%s' % (entry.date().day, entry.date().month, entry.date().year)}}
+			</td>
+			<td class="nolink">
+    			<a href="{{ entry.url }}"  target="_blank">
+    				<b>Link<b>
+    			</a>
+    		</td>
+        </tr>
+    {% endfor %}
+    
+    
+         	</tbody>
+    </table>
+    
+	<div class="pagination pagination-right"> 
+		<ul>
+		{% for offset,text in pages %}
+			<li><a href="/bad?offset={{offset}}"> {{text}} </a></li>
+		{% endfor %}
+		</ul>
+	</div>
+      <hr>
