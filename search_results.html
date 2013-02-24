@@ -3,12 +3,21 @@
       <hr>
 
       <p>
+        <b>  {{title}}: </b>
+      </p>
+      <p>
         <b> Found {{count}} results: </b>
       </p>
      <table class="table table-hover table-bordered " >
               <thead>
                 <tr>
                   <th>Description</th>
+
+                 {% if hidden is defined and debug is defined%}
+                      <th>Des fixed</th>
+                 {% else %}
+                 {% endif %}
+
                   <th>Author</th>
                   <th>Date</th>
                   <th>Link</th>
@@ -20,9 +29,16 @@
     	<tr>
     		<td>
     			
-    				{{entry.desc()|safe}}
+    				{{entry.decorated()|safe}}
     			
     		</td>
+        {% if hidden is defined and debug is defined%}
+            <td>
+              {{entry.fixed_decorated()|safe}}
+          </td>
+        {% else %}
+           
+        {% endif %}
       <td>
         {{entry.author()}}
       </td>
@@ -30,7 +46,7 @@
 				{{'%s.%s.%s' % (entry.date().day, entry.date().month, entry.date().year)}}
 			</td>
 			<td class="nolink">
-    			<a href="{{ entry.url }}"  target="_blank">
+    			<a href="{{ entry.url() }}"  target="_blank">
     				<b>Link<b>
     			</a>
     		</td>

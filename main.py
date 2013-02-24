@@ -112,7 +112,7 @@ class FetchRSSBatch(webapp2.RequestHandler):
                 rss.feed_max_size))
         logging.info("start %s, end%s fetched %d" % (start, end,len(entries)))
         for entry in entries:
-            id = rss.keyname_from_link(entry.link.decode('utf-8'))
+            docid = rss.keyname_from_link(entry.link.decode('utf-8'))
             args = {
                     'url'     : entry.link.decode('utf-8'), 
                     'desc'    : entry.desc.decode('utf-8'), 
@@ -120,16 +120,26 @@ class FetchRSSBatch(webapp2.RequestHandler):
                     'author'  : entry.author.decode('utf-8'),
                     'content' : entry.content.decode('utf-8')
             }
-            val = memcache.get(fetch_key(id))
+            val = memcache.get(fetch_key(docid))
             if val == None:
-                dbentry = models.insert_or_update(models.RSSEntry, id, **args)
-                msearch.index_entry(dbentry, rss_entry_index_name)
+                dbentry = models.insert_or_update(models.RSSEntry, docid, 
+                    **args)
+                msearch.index_entry(dbentry, docid, rss_entry_index_name)
             b = filters.scan(entry.desc.decode('utf-8'))
             if b:
                 logging.info('bad : %s' % b)
                 args['bad'] = b
-                bad = models.insert_or_update(models.RSSBadEntry, id, **args)
-                msearch.index_entry(dbentry, rss_bad_entry_index_name)
+                desc_fixed = filters.fix_body(entry.desc.decode('utf-8'))
+                args['desc_fixed'] = desc_fixed
+                bad = models.insert_or_update(
+                    models.RSSBadEntry, 
+                    docid, 
+                    **args)
+                msearch.index_entry(
+                    bad, 
+                    docid, 
+                    rss_bad_entry_index_name, 
+                    fixed=True)
 
         
 backwards_date = 'backwards'
@@ -254,10 +264,11 @@ class BadRSSPrinter(FrontEnd):
         return cursor
     
     def get_bad_entries(self, date, offset):
+        debug = self.request.get('debug')
         key = bad_entries_mc_key(date, offset)
         logging.info('key %s' % key)
         entries = memcache.get('%s' % key)
-        if entries is not None:
+        if entries is not None and not debug:
             logging.info('found key %s' % key)
             return entries
         else:
@@ -325,6 +336,11 @@ class BadRSSPrinter(FrontEnd):
             'enumerated_entries'    : enumerate(entries),
             'pages'                 : pages,
         } 
+
+        debug = self.request.get('debug')
+        if debug:
+            logging.info('debug rendering')
+            template_values['debug'] = True
         
         template = jinja_environment.get_template('boot2_bad.html')
         return template.render(template_values) 
@@ -465,6 +481,26 @@ class IndexBadEntries(webapp2.RequestHandler):
 
 import HTMLParser
 
+class ClearIndex(webapp2.RequestHandler):
+
+    def clear(self, index_name):
+        is_clear = msearch.clear_index(index_name, limit=100)
+        if not is_clear:
+            params = {'index': index_name}
+            taskqueue.add(url='/admin_clear_index', params=params)
+
+    def get(self):
+        self.clear(rss_entry_index_name)
+        self.clear(rss_bad_entry_index_name)
+        self.redirect('/admin_')
+
+    def post(self):
+        index_name = self.request.get('index_name')
+        if index_name:
+            self.clear(index_name) 
+        else:
+            logging.error('INDEX_CLEAR_ERROR no index name')
+
 class SearchPrinter(FrontEnd):
     def render_search_results(self, query):
         logging.info('searching for query: %s' % query)
@@ -473,14 +509,30 @@ class SearchPrinter(FrontEnd):
         #date = datetime.datetime.strptime(datestr, '%d.%m.%Y')
         results = msearch.search_entries(query=query,
             index_name=rss_entry_index_name)
+
+        hidden_results = msearch.search_entries(query=query,
+            index_name=rss_bad_entry_index_name)
         count = len(results)
-        
+
         template_values = {
-            'count'     : count,
+            'title'     : 'first 20 regular tenders',
+            'count'     : len(results),
             'results'   : results,
+        }
+        
+        hidden_template_values = {
+            'title'     : 'first 20 hidden tenders',
+            'hidden'    : True,
+            'count'     : len(hidden_results),
+            'results'   : hidden_results,
         } 
+        debug = self.request.get('debug')
+        if debug:
+            hidden_template_values['debug'] = True
         template = jinja_environment.get_template('search_results.html')
-        return template.render(template_values)
+        reg_res = template.render(template_values)
+        hidden_res = template.render(hidden_template_values)
+        return "%s<br>%s" % (hidden_res, reg_res)
 
     def get(self):
         search_results = ''
@@ -499,12 +551,13 @@ app = webapp2.WSGIApplication([('/', MainPage),
                                ('/admin_', AdminPage),
                                ('/bad', BadRSSPrinter),
                                ('/contact', MsgHandler),
-                               ('/admin_clear_rss_index', ClearRSSIndex),
+                               #('/admin_clear_rss_index', ClearRSSIndex),
                                ('/admin_index_rss_entries', IndexRSSEntries),
                                ('/admin_add_index_date', AddIndexeddate),
                                ('/admin_test_cron', TestCron),
                                ('/admin_fetch_rss', FetchRSS),
                                ('/admin_fetch_rss_batch',FetchRSSBatch),
                                ('/admin_index', IndexBadEntries),
+                               ('/admin_clear_index', ClearIndex),
                                ('/search', SearchPrinter)],
                               debug=True)

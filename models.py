@@ -34,13 +34,22 @@ class RSSEntry(db.Model):
 
 class RSSBadEntry(RSSEntry):
     bad = db.StringProperty(required=True)
+    desc_fixed = db.TextProperty()
 
     def update_from(self, **kwargs):
         super(RSSBadEntry, self).update_from(**kwargs)
         self.bad = kwargs.get('bad')
+        self.desc_fixed = kwargs.get('desc_fixed')
     
     def decorated(self):
         dec = filters.decorate_body(self.desc)
+        return dec.decode('utf-8')
+
+    def fixed_decorated(self):
+        if self.desc_fixed != None:
+            dec = filters.decorate_body_all(self.desc_fixed)
+        else:
+            dec = 'WAS NOT FIXED YET'
         return dec.decode('utf-8')
 
 
