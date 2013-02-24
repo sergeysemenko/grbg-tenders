@@ -39,3 +39,20 @@ def scan(body):
 		bad =  f(body)
 		if bad:
 			return bad
+
+def decorate(word):
+    res = ''
+    for c in word:
+        if is_latin_char(c):
+            c = '<font color="red">%s</font>' % c
+        res += c
+    return res
+
+def decorate_body(body):
+    res = []
+    for word in body.split():
+        if is_interleaved(word):
+            word = decorate(word)
+        res.append(word.encode('utf-8'))
+    return " ".join(res)
+    

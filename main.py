@@ -22,34 +22,11 @@ import os
 jinja_environment = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
 
-
-
-
 def get_content(url):
     opener = urllib2.build_opener()
     opener.addheaders = [('User-agent', 'Mozilla/5.0'), ("Accept-Encoding", 'UTF-8')]
     response = opener.open(url)
     return response.read()
-
-
-
-def decorate(word):
-    res = ''
-    for c in word:
-        if filters.is_latin_char(c):
-            c = '<font color="red">%s</font>' % c
-        res += c
-    return res
-
-def decorate_body(body):
-    
-    res = []
-    for word in body.split():
-        if filters.is_interleaved(word):
-            word = decorate(word)
-        res.append(word.encode('utf-8'))
-    return " ".join(res)
-    
 
 
 class AdminPage(webapp2.RequestHandler):
@@ -127,13 +104,13 @@ class RSSEntry(db.Model):
     url = db.StringProperty(required=True)
     desc = db.TextProperty(required=True)
     date = db.DateTimeProperty(required=True)
-    
+ 
 
 class RSSBadEntry(RSSEntry):
     bad = db.StringProperty(required=True)
     
     def decorated(self):
-        dec = decorate_body(self.desc)
+        dec = filters.decorate_body(self.desc)
         return dec.decode('utf-8')
 
 rss_url = "http://zakupki.gov.ru/223/purchase/public/notice-search-rss.html?"
@@ -284,7 +261,7 @@ class FetchRSSBatch(webapp2.RequestHandler):
             if val == None:
                 entry.get_or_insert(id)
             #logging.info('INDEXING %s in place' % id)
-            b = filters.filter(entry.desc.decode('utf-8'))
+            b = filters.scan(entry.desc.decode('utf-8'))
             if b:
                 logging.info('bad : %s' % b)
                 bad = RSSBadEntry.get_or_insert(id, 
@@ -532,7 +509,7 @@ class IndexRSSEntries(webapp2.RequestHandler):
         entries = list(query)
         logging.info('start indexing %d entries' % len(entries))
         for entry in entries:
-            b = filters.filter(entry.desc)
+            b = filters.scan(entry.desc)
             if b:
                 logging.info('bad : %s' % b)
                 keyname = keyname_from_link(entry.url)
