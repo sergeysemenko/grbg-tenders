@@ -52,10 +52,11 @@ class ParsedRSSEntry:
         self.published_parsed: datetime.datetime.now()
         self.content:   unicode(), value of <content:encoded>
         """
+        ucontent = edict['content:encoded']
         self.link = edict['link'].encode('utf-8')
-        self.content = edict['content:encoded']
-        self.desc = decode_rss_content(self.content, rss_desc_tag)
-        self.author = decode_rss_content(self.content, rss_author_tag)
+        self.content = ucontent.encode('utf-8')
+        self.desc = decode_rss_content(ucontent, rss_desc_tag)
+        self.author = decode_rss_content(ucontent, rss_author_tag)
         self.published = edict['pubDate'].encode('utf-8')
         self.published_parsed = datetime.datetime.strptime(self.published, 
                                                   '%a, %d %b %Y %H:%M:%S %Z')
@@ -64,8 +65,14 @@ class ParsedRSSEntry:
         return self.desc != None and self.author != None    
     
     def __str__(self):
-        return 'link: %s\n desc:%s\n published:%s\n published_parsed:%s' % (
-            self.link, self.desc, self.published, self.published_parsed)
+        members = []
+        members.append('link: %s' % self.link)
+        members.append('content: %s' % self.content)
+        members.append('desc: %s' % self.desc)
+        members.append('authour: %s' % self.author)
+        members.append('published: %s' % self.published)
+        members.append('published_parsed: %s' % self.published_parsed)
+        return "\n".join(members)
     
 
 def parse_tag_chunk(tag, text):
@@ -142,4 +149,6 @@ def keyname_from_link(link):
     return str(int(id))    
     
 if __name__ == '__main__':
-    print len(fetch_rss_by_range2('1.2.2013', '100000', '0'))
+    for entry in fetch_rss_by_range2('1.2.2013', '100000', '0'):
+        print entry
+
