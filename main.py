@@ -21,8 +21,6 @@ import os
 
 jinja_environment = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
-    
-
 
 class AdminPage(webapp2.RequestHandler):
     def get(self):
