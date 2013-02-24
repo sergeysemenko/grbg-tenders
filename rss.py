@@ -50,7 +50,8 @@ class ParsedRSSEntry:
         self.desc:      raw_str, value of  u'Наименование закупки:'
         self.published: raw_str, date published
         self.published_parsed: datetime.datetime.now()
-        self.content:   unicode(), value of <content:encoded>
+        self.content:   raw_str, value of <content:encoded>
+        self.author:    raw_str
         """
         ucontent = edict['content:encoded']
         self.link = edict['link'].encode('utf-8')

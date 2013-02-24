@@ -106,17 +106,21 @@ class FetchRSSBatch(webapp2.RequestHandler):
         logging.info("start %s, end%s fetched %d" % (start, end,len(entries)))
         for entry in entries:
             id = rss.keyname_from_link(entry.link.decode('utf-8'))
+            args = {
+                    'url'     : entry.link.decode('utf-8'), 
+                    'desc'    : entry.desc.decode('utf-8'), 
+                    'date'    : entry.published_parsed,
+                    'author'  : entry.author.decode('utf-8'),
+                    'content' : entry.content.decode('utf-8')
+            }
             val = memcache.get(fetch_key(id))
             if val == None:
-                models.RSSEntry.insert_unique(id, entry)
+                models.insert_or_update(models.RSSEntry, id, **args)
             b = filters.scan(entry.desc.decode('utf-8'))
             if b:
                 logging.info('bad : %s' % b)
-                bad = models.RSSBadEntry.get_or_insert(id, 
-                                                url=entry.link.decode('utf-8'), 
-                                                desc=entry.desc.decode('utf-8'), 
-                                                bad=b, 
-                                                date=entry.published_parsed)
+                args['bad'] = b
+                bad = models.insert_or_update(models.RSSBadEntry, id, **args)
         
 backwards_date = 'backwards'
 
