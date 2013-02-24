@@ -34,8 +34,8 @@ def decode_rss_content(content, tag):
         value = value.split('>')[1]
         value = value.split('<')[0]
     except:
-        logging.error('PARSE_RSS_CONTENT_ERROR: content: %s \ntag: %s' % (content, 
-                       tag.encode('utf-8')))
+        logging.error('PARSE_RSS_CONTENT_ERROR: content: %s \ntag: %s' % (
+                    content, tag.encode('utf-8')))
     return value
 
 class ParsedRSSEntry:
@@ -64,8 +64,8 @@ class ParsedRSSEntry:
         return self.desc != None and self.author != None    
     
     def __str__(self):
-        return 'link: %s\n desc:%s\n published:%s\n published_parsed:%s' % (self.link, 
-            self.desc, self.published, self.published_parsed)
+        return 'link: %s\n desc:%s\n published:%s\n published_parsed:%s' % (
+            self.link, self.desc, self.published, self.published_parsed)
     
 
 def parse_tag_chunk(tag, text):
@@ -100,13 +100,15 @@ def parse_rss_chunk(chunk):
     edict = {'link' : None, 'content:encoded' : None, 'pubDate' : None}
     for tag in edict.keys():
         if tag not in chunk:
-            logging.error('PARSE_RSS_CHUNK_ERROR: no tag%s in chunk:%s' % (tag, chunk))
+            logging.error('PARSE_RSS_CHUNK_ERROR: no tag%s in chunk:%s' % (
+                tag, chunk))
             return None
         else:
             try:
                 val = parse_tag_chunk(tag, chunk)
             except:
-                logging.error('PARSE_RSS_CHUNK_ERROR: tag%s \nchunk:%s' % (tag, chunk))
+                logging.error('PARSE_RSS_CHUNK_ERROR: tag%s \nchunk:%s' % (
+                    tag, chunk))
                 return None
             edict[tag] = val
     return edict

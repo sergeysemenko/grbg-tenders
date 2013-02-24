@@ -292,10 +292,13 @@ class BadRSSPrinter(FrontEnd):
             end = date + datetime.timedelta(days=1)
             logging.info('date start: %s' % date)
             logging.info('date end: %s' % end)
-            query = db.GqlQuery('SELECT * FROM RSSBadEntry WHERE date >= :1 AND date <= :2 ORDER BY date DESC',
-                    date, end)
+            query = db.GqlQuery(
+                'SELECT * FROM RSSBadEntry '\
+                'WHERE date >= :1 AND date <= :2 ORDER BY date DESC',
+                date, end)
         else:
-            query = query = db.GqlQuery('SELECT * FROM RSSBadEntry ORDER BY date DESC')
+            query = query = db.GqlQuery(
+                'SELECT * FROM RSSBadEntry ORDER BY date DESC')
 
         entries = self.retreive_with_offset(query, offset)
         pages = self.gen_pages(offset, len(entries))
@@ -348,7 +351,8 @@ class IndexRSSEntries(webapp2.RequestHandler):
                 date = day_date(datetime.datetime.now())
         logging.info('INDEXING WITH DATE %s' % date)
         end = date + datetime.timedelta(days=1)
-        query = db.GqlQuery('SELECT * FROM RSSEntry WHERE date >= :1 AND date <= :2',
+        query = db.GqlQuery(
+            'SELECT * FROM RSSEntry WHERE date >= :1 AND date <= :2',
                 date, end)
         entries = list(query)
         logging.info('start indexing %d entries' % len(entries))
@@ -357,7 +361,8 @@ class IndexRSSEntries(webapp2.RequestHandler):
             if b:
                 logging.info('bad : %s' % b)
                 keyname = rss.keyname_from_link(entry.url)
-                bad = models.RSSBadEntry.get_or_insert(keyname, url=entry.url, desc=entry.desc, bad=b, date=entry.date)
+                bad = models.RSSBadEntry.get_or_insert(keyname, 
+                    url=entry.url, desc=entry.desc, bad=b, date=entry.date)
         memcache.flush_all()
         keyname = str(date)
         models.IndexedDate.get_or_insert(keyname, date=date)
@@ -424,7 +429,8 @@ class MsgHandler(FrontEnd):
         subject = 'Contact message received at %s from %s' % (appid, name)
         
         try:
-            mail.send_mail_to_admins(sender=email, subject=subject, body=message)
+            mail.send_mail_to_admins(
+                sender=email, subject=subject, body=message)
         except:
             logging.info("email failed with %s %s %s " %(name, email, message))
         self.redirect('/')
