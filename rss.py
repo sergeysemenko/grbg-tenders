@@ -13,6 +13,9 @@ static_params = "okvedText=&searchWord=&organName=&organName=&organName=&okdpTex
 price_params_tmpl = '&startingContractPriceTo=%s&startingContractPriceFrom=%s&'
 date_params_tmpl = '&publishDateFrom=%s&publishDateTo=%s&'
 
+#they don't send more than 200 per response
+feed_max_size = 200
+
 # there is for sure less than 200 entries after price_tail  
 price_tail = 6100000
 

@@ -103,6 +103,9 @@ class FetchRSSBatch(webapp2.RequestHandler):
         msg = 'FRSSBATCH: date %s, start %s, end%s' % (datestr, start, end)
         logging.info(msg)
         entries = rss.fetch_rss_by_range2(datestr, end, start)
+        if len(entries) == rss.feed_max_size:
+            logging.warning("FRSSBATCH_WARNING: reached feed size limit %d" %(
+                rss.feed_max_size))
         logging.info("start %s, end%s fetched %d" % (start, end,len(entries)))
         for entry in entries:
             id = rss.keyname_from_link(entry.link.decode('utf-8'))
