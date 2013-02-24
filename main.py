@@ -148,7 +148,11 @@ def get_prev_back_date():
     q = models.IndexedDate.all()
     q.order('date')
     dates = list(q)
-    logging.info("back date is %s"  % dates[0].date)
+    if len(dates) == 0:
+        date = datetime.datetime.now()
+    else:
+        date = dates[0].date
+    logging.info("back date is %s"  % date)
     return dates[0].date - datetime.timedelta(days=1)
 
 class FetchRSS(webapp2.RequestHandler):
