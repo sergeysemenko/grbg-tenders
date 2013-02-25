@@ -370,7 +370,9 @@ class BadRSSPrinter(FrontEnd):
             date = None
         offset = parse_offset(self.request.get('offset'))       
         entries = self.get_bad_entries(date, offset)
-        self.render_page(entries)
+        template = jinja_environment.get_template('date_box.html')
+        body = template.render({'search_results' : entries})
+        self.render_page(body)
 
 class IndexRSSEntries(webapp2.RequestHandler):
 

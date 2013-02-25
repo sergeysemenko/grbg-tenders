@@ -1,13 +1,15 @@
 
 
-      <hr>
+      
 
       <p>
         <b>  {{title}}: </b>
       </p>
+      {% if count is defined %}
       <p>
         <b> Found {{count}} results: </b>
       </p>
+      {% endif %}
      <table class="table table-hover table-bordered " >
               <thead>
                 <tr>
@@ -71,4 +73,4 @@
 		{% endfor %}
 		</ul>
 	</div>
-      <hr>
+    
