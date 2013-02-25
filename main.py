@@ -535,6 +535,10 @@ class SearchPrinter(FrontEnd):
         hidden_results = msearch.search_entries(query=query,
             index_name=rss_bad_entry_index_name, hidden=True)
         
+        if not hidden_results:
+            template = jinja_environment.get_template('search_error.html')
+            return template.render({})
+        
         #count = len(results)
 
         #We will not search in regular entries since there are too
@@ -569,7 +573,7 @@ class SearchPrinter(FrontEnd):
         body = template.render({'search_results' : search_results})
         self.render_page(body)
 
-               
+             
         
 
 app = webapp2.WSGIApplication([('/', MainPage),

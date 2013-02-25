@@ -144,7 +144,9 @@ def search_entries(query='date > 2013-02-22 date < 2013-02-24',
     except search.Error, e:
         # possibly log the failure
         logging.error("Search ERROR ")
-        return []
+    except:
+        logging.error('General error in search.')
+    return None
 
 
 
