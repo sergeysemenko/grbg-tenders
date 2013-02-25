@@ -3,5 +3,7 @@ cron:
   url: /admin_fetch_rss
   schedule: every 6 hours synchronized
 
-
+- description: yesterday indexing job
+  url: /admin_fetch_rss?date=backwards
+  schedule: every day 03:00
 

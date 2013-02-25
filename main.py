@@ -147,6 +147,7 @@ class FetchRSSBatch(webapp2.RequestHandler):
 
         
 backwards_date = 'backwards'
+yesterday_date = 'yesterday'
 
 def get_prev_back_date():
     q = models.IndexedDate.all()
@@ -194,6 +195,12 @@ class FetchRSS(webapp2.RequestHandler):
             #don't index too much
             if date.year < 2013 and date.month < 9:
                 return
+        elif date == yesterday_date:
+            #get the yesterday's date
+            #this is for ensuring that we indexedeverything from yesterday
+            logging.info('today is %s' % datetime.datetime.now())
+            date = datetime.datetime.now() - datetime.timedelta(days=1)
+            logging.info('indexing yesterday %s' % date)
             #datestr = '%s.%s.%s' % (date.day, date.month, date.year)
         else:
             try:
