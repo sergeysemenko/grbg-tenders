@@ -13,6 +13,8 @@ class RSSEntry(db.Model):
     date = db.DateTimeProperty(required=True)
     author = db.TextProperty()
     content = db.TextProperty()
+    price_start = db.IntegerProperty()
+    price_end = db.IntegerProperty()
     
     @staticmethod
     def insert_unique(key, parsed_rss_entry):
@@ -22,7 +24,9 @@ class RSSEntry(db.Model):
             desc=parsed_rss_entry.desc.decode('utf-8'), 
             date=parsed_rss_entry.published_parsed,
             author=parsed_rss_entry.author,
-            content=parsed_rss_entry.content)
+            content=parsed_rss_entry.content,
+            price_start=parsed_rss_entry.price_start,
+            price_end=parsed_rss_entry.price_end)
 
     def update_from(self, **kwargs):
         self.url     = kwargs.get('url')
@@ -30,6 +34,8 @@ class RSSEntry(db.Model):
         self.date    = kwargs.get('date')
         self.author  = kwargs.get('author')
         self.content = kwargs.get('content')
+        self.price_start = kwargs.get('price_start')
+        self.price_end   = kwargs.get('price_end')
     
 
 class RSSBadEntry(RSSEntry):

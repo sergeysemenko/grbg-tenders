@@ -13,6 +13,7 @@
                      
                   {% endif %}
                   <th>Date</th>
+                  <th>Price range</th>
                   <th>Link</th>
                 </tr>
               </thead>
@@ -37,6 +38,9 @@
         {% endif %}
       <td>
         {{'%s.%s.%s' % (entry.date.day, entry.date.month, entry.date.year)}}
+      </td>
+      <td>
+        {{'%s - %s' % (entry.price_start, entry.price_end)}}
       </td>
       <td class="nolink">
           <a href="{{ entry.url }}"  target="_blank">

@@ -15,22 +15,18 @@ def create_document(entry, docid, fixed=False):
                 search.TextField(name='author', value=entry.author.lower()),
         search.TextField(name='desc', value=entry.desc.lower()),
                 search.HtmlField(name='content', value=entry.content.lower()),
+                search.NumberField(name='price_start', value=entry.price_start),
+                search.NumberField(name='price_end', value=entry.price_end),
                 search.DateField(name='date', value=entry.date)]
     if fixed : #and hasattr(entry, 'desc_fixed'):
         fields.append(
             search.TextField(name='desc_fixed', value=entry.desc_fixed.lower())
             )
-    return search.Document(fields=fields)
+    return search.Document(doc_id=docid, fields=fields)
 
 def index_entry(entry, docid, index_name=debug_index_name, fixed=False):
     # Get the index.
     index = search.Index(name=index_name)
-
-    # TODO(grbg): transaction, mutex?
-    doc = index.get(docid)
-    if doc:
-        #TODO(grbg): if it's slow, check if update+put doesn't duplicate doc
-        index.delete([docid])
     
     doc = create_document(entry, docid, fixed=fixed)
 
@@ -49,7 +45,7 @@ def clear_index(index_name=debug_index_name, limit=100):
     index = search.Index(name=index_name)
     logging.info('clearing index %s' % index_name)
     response = index.get_range(limit=limit, ids_only=True)
-    is_clear = len(response.results) > 0
+    is_clear = len(response.results) == 0
     try:
         ids = [doc.doc_id for doc in response.results]
         index.delete(ids)
@@ -93,6 +89,12 @@ class MSearchResult(object):
     def date(self):
         return self.get_field_val('date')
 
+    def price_start(self):
+        return self.get_field_val('price_start')
+
+    def price_end(self):
+        return self.get_field_val('price_end')
+
 import HTMLParser
 
 def search_entries(query='date > 2013-02-22 date < 2013-02-24',
@@ -110,7 +112,8 @@ def search_entries(query='date > 2013-02-22 date < 2013-02-24',
         if date:
             querystr += '  date > %s-%s-%s' % (
                 date.year, date.month, date.day)
-        returned_fields=['url', 'author', 'date', 'desc', 'desc_fixed']
+        returned_fields=['url', 'author', 'date', 'desc', 
+                         'price_start', 'price_end']
         if hidden:
             returned_fields.append('desc_fixed')
         results = index.search(search.Query(

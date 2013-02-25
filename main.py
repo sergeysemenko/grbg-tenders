@@ -118,13 +118,17 @@ class FetchRSSBatch(webapp2.RequestHandler):
                     'desc'    : entry.desc.decode('utf-8'), 
                     'date'    : entry.published_parsed,
                     'author'  : entry.author.decode('utf-8'),
-                    'content' : entry.content.decode('utf-8')
+                    'content' : entry.content.decode('utf-8'),
+                    'price_start' : entry.price_start,
+                    'price_end'   : entry.price_end
             }
             val = memcache.get(fetch_key(docid))
             if val == None:
                 dbentry = models.insert_or_update(models.RSSEntry, docid, 
                     **args)
-                msearch.index_entry(dbentry, docid, rss_entry_index_name)
+                # This is too expensive.. if we obtain enough search quota
+                # maybe we can do that. Disabling for now.
+                #msearch.index_entry(dbentry, docid, rss_entry_index_name)
             b = filters.scan(entry.desc.decode('utf-8'))
             if b:
                 logging.info('bad : %s' % b)
@@ -158,7 +162,7 @@ def get_prev_back_date():
 class FetchRSS(webapp2.RequestHandler):
     def fetch(self, datestr):
         logging.info('FETCHING RSS FOR DATE %s' % datestr)
-        range = 49999
+        range = 50000
         bigrange = range*5
         start = 0
         toohigh = 1000000
@@ -173,7 +177,7 @@ class FetchRSS(webapp2.RequestHandler):
                 'start': start 
             }
             taskqueue.add(url='/admin_fetch_rss_batch', params=params)
-            start +=  cur_range +10
+            start +=  cur_range + 1
             
         params = {
             'date' : datestr,
@@ -488,20 +492,25 @@ import HTMLParser
 class ClearIndex(webapp2.RequestHandler):
 
     def clear(self, index_name):
+        logging.info('received clear request for %s' % index_name)
         is_clear = msearch.clear_index(index_name, limit=100)
         if not is_clear:
-            params = {'index': index_name}
+            logging.info('%s needs more cleaning' % index_name)
+            params = {'index_name': index_name}
             taskqueue.add(url='/admin_clear_index', params=params)
+        else:
+            logging.info('%s is clear! good job!' % index_name)
 
     def get(self):
         self.clear(rss_entry_index_name)
-        self.clear(rss_bad_entry_index_name)
+        #self.clear(rss_bad_entry_index_name)
         self.redirect('/admin_')
 
     def post(self):
         index_name = self.request.get('index_name')
         if index_name:
             self.clear(index_name) 
+            
         else:
             logging.error('INDEX_CLEAR_ERROR no index name')
 
@@ -511,18 +520,24 @@ class SearchPrinter(FrontEnd):
         logging.info('type q before: %s' % type(query))
         #datestr = self.request.get('date')
         #date = datetime.datetime.strptime(datestr, '%d.%m.%Y')
-        results = msearch.search_entries(query=query,
-            index_name=rss_entry_index_name)
+
+        # Disabled.
+        # results = msearch.search_entries(query=query,
+        #     index_name=rss_entry_index_name)
 
         hidden_results = msearch.search_entries(query=query,
-            index_name=rss_bad_entry_index_name)
-        count = len(results)
+            index_name=rss_bad_entry_index_name, hidden=True)
+        
+        #count = len(results)
 
-        template_values = {
-            'title'     : 'first 20 regular tenders',
-            'count'     : len(results),
-            'results'   : results,
-        }
+        #We will not search in regular entries since there are too
+        #many of them and search quota is only
+        #20,000/day and 250MB total index size
+        # template_values = {
+        #     'title'     : 'first 20 regular tenders',
+        #     'count'     : len(results),
+        #     'results'   : results,
+        # }
         
         hidden_template_values = {
             'title'     : 'first 20 hidden tenders',
@@ -534,9 +549,9 @@ class SearchPrinter(FrontEnd):
         if debug:
             hidden_template_values['debug'] = True
         template = jinja_environment.get_template('search_results.html')
-        reg_res = template.render(template_values)
+        #reg_res = template.render(template_values)
         hidden_res = template.render(hidden_template_values)
-        return "%s<br>%s" % (hidden_res, reg_res)
+        return hidden_res
 
     def get(self):
         search_results = ''

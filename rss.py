@@ -42,7 +42,7 @@ def decode_rss_content(content, tag):
     return value
 
 class ParsedRSSEntry:
-    def __init__(self, edict):
+    def __init__(self, edict, price_start, price_end):
         """
         @param edict: {'link' : unicode(), 
                        'content:encoded' : unicode(), 
@@ -64,6 +64,8 @@ class ParsedRSSEntry:
         self.published = edict['pubDate'].encode('utf-8')
         self.published_parsed = datetime.datetime.strptime(self.published, 
                                                   '%a, %d %b %Y %H:%M:%S %Z')
+        self.price_start = price_start
+        self.price_end   = price_end
     
     def valid(self):
         return self.desc != None and self.author != None    
@@ -76,6 +78,8 @@ class ParsedRSSEntry:
         members.append('authour: %s' % self.author)
         members.append('published: %s' % self.published)
         members.append('published_parsed: %s' % self.published_parsed)
+        members.append('price_start: %s' % self.price_start)
+        members.append('price_end: %s' % self.price_end)
         return "\n".join(members)
     
 
@@ -142,7 +146,7 @@ def fetch_rss_by_range2(datestr, end, start):
         if 'pubDate' in chunk:
             edict = parse_rss_chunk(chunk)
             if edict:   
-                entry = ParsedRSSEntry(edict)
+                entry = ParsedRSSEntry(edict, int(start), int(end))
                 if entry.valid():
                     entries.append(entry)
     return entries
@@ -154,5 +158,5 @@ def keyname_from_link(link):
     
 if __name__ == '__main__':
     for entry in fetch_rss_by_range2('1.2.2013', '100000', '0'):
-        print entry
+        print entry.price_start, entry.price_end
 

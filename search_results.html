@@ -11,6 +11,7 @@
      <table class="table table-hover table-bordered " >
               <thead>
                 <tr>
+                  <th>Author</th>
                   <th>Description</th>
 
                  {% if hidden is defined and debug is defined%}
@@ -18,8 +19,9 @@
                  {% else %}
                  {% endif %}
 
-                  <th>Author</th>
+                  
                   <th>Date</th>
+                  <th>Price range</th>
                   <th>Link</th>
                 </tr>
               </thead>
@@ -27,7 +29,11 @@
             
     {%for entry in results %}
     	<tr>
-    		<td>
+        <td>
+          {{entry.author()}}
+        </td>
+
+    	   <td>
     			
     				{{entry.decorated()|safe}}
     			
@@ -39,12 +45,13 @@
         {% else %}
            
         {% endif %}
-      <td>
-        {{entry.author()}}
-      </td>
+      
 			<td>
 				{{'%s.%s.%s' % (entry.date().day, entry.date().month, entry.date().year)}}
 			</td>
+      <td>
+        {{'%s - %s' % (entry.price_start(), entry.price_end())}}
+      </td>
 			<td class="nolink">
     			<a href="{{ entry.url() }}"  target="_blank">
     				<b>Link<b>
