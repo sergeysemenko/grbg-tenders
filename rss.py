@@ -13,6 +13,9 @@ static_params = "okvedText=&searchWord=&organName=&organName=&organName=&okdpTex
 price_params_tmpl = '&startingContractPriceTo=%s&startingContractPriceFrom=%s&'
 date_params_tmpl = '&publishDateFrom=%s&publishDateTo=%s&'
 
+#they don't send more than 200 per response
+feed_max_size = 200
+
 # there is for sure less than 200 entries after price_tail  
 price_tail = 6100000
 
@@ -34,12 +37,12 @@ def decode_rss_content(content, tag):
         value = value.split('>')[1]
         value = value.split('<')[0]
     except:
-        logging.error('PARSE_RSS_CONTENT_ERROR: content: %s \ntag: %s' % (content, 
-        			   tag.encode('utf-8')))
+        logging.error('PARSE_RSS_CONTENT_ERROR: content: %s \ntag: %s' % (
+                    content, tag.encode('utf-8')))
     return value
 
 class ParsedRSSEntry:
-    def __init__(self, edict):
+    def __init__(self, edict, price_start, price_end):
         """
         @param edict: {'link' : unicode(), 
                        'content:encoded' : unicode(), 
@@ -50,22 +53,34 @@ class ParsedRSSEntry:
         self.desc:      raw_str, value of  u'Наименование закупки:'
         self.published: raw_str, date published
         self.published_parsed: datetime.datetime.now()
-        self.content:   unicode(), value of <content:encoded>
+        self.content:   raw_str, value of <content:encoded>
+        self.author:    raw_str
         """
+        ucontent = edict['content:encoded']
         self.link = edict['link'].encode('utf-8')
-        self.content = edict['content:encoded']
-        self.desc = decode_rss_content(self.content, rss_desc_tag)
-        self.author = decode_rss_content(self.content, rss_author_tag)
+        self.content = ucontent.encode('utf-8')
+        self.desc = decode_rss_content(ucontent, rss_desc_tag)
+        self.author = decode_rss_content(ucontent, rss_author_tag)
         self.published = edict['pubDate'].encode('utf-8')
         self.published_parsed = datetime.datetime.strptime(self.published, 
                                                   '%a, %d %b %Y %H:%M:%S %Z')
+        self.price_start = price_start
+        self.price_end   = price_end
     
     def valid(self):
         return self.desc != None and self.author != None    
     
     def __str__(self):
-        return 'link: %s\n desc:%s\n published:%s\n published_parsed:%s' % (self.link, 
-            self.desc, self.published, self.published_parsed)
+        members = []
+        members.append('link: %s' % self.link)
+        members.append('content: %s' % self.content)
+        members.append('desc: %s' % self.desc)
+        members.append('authour: %s' % self.author)
+        members.append('published: %s' % self.published)
+        members.append('published_parsed: %s' % self.published_parsed)
+        members.append('price_start: %s' % self.price_start)
+        members.append('price_end: %s' % self.price_end)
+        return "\n".join(members)
     
 
 def parse_tag_chunk(tag, text):
@@ -100,13 +115,15 @@ def parse_rss_chunk(chunk):
     edict = {'link' : None, 'content:encoded' : None, 'pubDate' : None}
     for tag in edict.keys():
         if tag not in chunk:
-            logging.error('PARSE_RSS_CHUNK_ERROR: no tag%s in chunk:%s' % (tag, chunk))
+            logging.error('PARSE_RSS_CHUNK_ERROR: no tag%s in chunk:%s' % (
+                tag, chunk))
             return None
         else:
             try:
                 val = parse_tag_chunk(tag, chunk)
             except:
-                logging.error('PARSE_RSS_CHUNK_ERROR: tag%s \nchunk:%s' % (tag, chunk))
+                logging.error('PARSE_RSS_CHUNK_ERROR: tag%s \nchunk:%s' % (
+                    tag, chunk))
                 return None
             edict[tag] = val
     return edict
@@ -129,7 +146,7 @@ def fetch_rss_by_range2(datestr, end, start):
         if 'pubDate' in chunk:
             edict = parse_rss_chunk(chunk)
             if edict:   
-                entry = ParsedRSSEntry(edict)
+                entry = ParsedRSSEntry(edict, int(start), int(end))
                 if entry.valid():
                     entries.append(entry)
     return entries
@@ -140,4 +157,6 @@ def keyname_from_link(link):
     return str(int(id))    
     
 if __name__ == '__main__':
-    print len(fetch_rss_by_range2('1.2.2013', '100000', '0'))
+    for entry in fetch_rss_by_range2('1.2.2013', '100000', '0'):
+        print entry.price_start, entry.price_end
+

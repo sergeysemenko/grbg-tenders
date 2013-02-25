@@ -1,0 +1,74 @@
+
+
+      <hr>
+
+      <p>
+        <b>  {{title}}: </b>
+      </p>
+      <p>
+        <b> Found {{count}} results: </b>
+      </p>
+     <table class="table table-hover table-bordered " >
+              <thead>
+                <tr>
+                  <th>Author</th>
+                  <th>Description</th>
+
+                 {% if hidden is defined and debug is defined%}
+                      <th>Des fixed</th>
+                 {% else %}
+                 {% endif %}
+
+                  
+                  <th>Date</th>
+                  <th>Price range</th>
+                  <th>Link</th>
+                </tr>
+              </thead>
+              <tbody >
+            
+    {%for entry in results %}
+    	<tr>
+        <td>
+          {{entry.author()}}
+        </td>
+
+    	   <td>
+    			
+    				{{entry.decorated()|safe}}
+    			
+    		</td>
+        {% if hidden is defined and debug is defined%}
+            <td>
+              {{entry.fixed_decorated()|safe}}
+          </td>
+        {% else %}
+           
+        {% endif %}
+      
+			<td>
+				{{'%s.%s.%s' % (entry.date().day, entry.date().month, entry.date().year)}}
+			</td>
+      <td>
+        {{'%s - %s' % (entry.price_start(), entry.price_end())}}
+      </td>
+			<td class="nolink">
+    			<a href="{{ entry.url() }}"  target="_blank">
+    				<b>Link<b>
+    			</a>
+    		</td>
+        </tr>
+    {% endfor %}
+    
+    
+         	</tbody>
+    </table>
+    
+	<div class="pagination pagination-right"> 
+		<ul>
+		{% for offset,text in pages %}
+			<li><a href="/bad?offset={{offset}}"> {{text}} </a></li>
+		{% endfor %}
+		</ul>
+	</div>
+      <hr>
