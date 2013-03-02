@@ -12,12 +12,11 @@ from time import mktime
 from google.appengine.api import urlfetch
 import msearch
 import mail_gen
-import urllib2, urllib
 import rss
 import core
 import models
 import filters
-from datetime import datetime
+
 import jinja2
 import os
 
@@ -81,7 +80,7 @@ class FrontEnd(webapp2.RequestHandler):
     def render_page(self, body):
         header = self.render_header()
         footer = self.render_footer()
-        self.response.out.write(header + body + footer)
+        self.response.out.write(header + body + footer )
         
 class MainPage(FrontEnd):
     def get(self):
@@ -109,14 +108,14 @@ class FetchRSSBatch(webapp2.RequestHandler):
         logging.info(msg)
         entries = rss.fetch_rss_by_range2(datestr, end, start)
         if len(entries) == rss.feed_max_size:
-            logging.warning("FRSSBATCH_WARNING: reached feed size limit %d" % (
+            logging.warning("FRSSBATCH_WARNING: reached feed size limit %d" %(
                 rss.feed_max_size))
-        logging.info("start %s, end%s fetched %d" % (start, end, len(entries)))
+        logging.info("start %s, end%s fetched %d" % (start, end,len(entries)))
         for entry in entries:
             docid = rss.keyname_from_link(entry.link.decode('utf-8'))
             args = {
-                    'url'     : entry.link.decode('utf-8'),
-                    'desc'    : entry.desc.decode('utf-8'),
+                    'url'     : entry.link.decode('utf-8'), 
+                    'desc'    : entry.desc.decode('utf-8'), 
                     'date'    : entry.published_parsed,
                     'author'  : entry.author.decode('utf-8'),
                     'content' : entry.content.decode('utf-8'),
@@ -125,11 +124,11 @@ class FetchRSSBatch(webapp2.RequestHandler):
             }
             val = memcache.get(fetch_key(docid))
             if val == None:
-                dbentry = models.insert_or_update(models.RSSEntry, docid,
+                dbentry = models.insert_or_update(models.RSSEntry, docid, 
                     **args)
                 # This is too expensive.. if we obtain enough search quota
                 # maybe we can do that. Disabling for now.
-                # msearch.index_entry(dbentry, docid, rss_entry_index_name)
+                #msearch.index_entry(dbentry, docid, rss_entry_index_name)
             b = filters.scan(entry.desc.decode('utf-8'))
             if b:
                 logging.info('bad : %s' % b)
@@ -137,13 +136,13 @@ class FetchRSSBatch(webapp2.RequestHandler):
                 desc_fixed = filters.fix_body(entry.desc.decode('utf-8'))
                 args['desc_fixed'] = desc_fixed
                 bad = models.insert_or_update(
-                    models.RSSBadEntry,
-                    docid,
+                    models.RSSBadEntry, 
+                    docid, 
                     **args)
                 msearch.index_entry(
-                    bad,
-                    docid,
-                    rss_bad_entry_index_name,
+                    bad, 
+                    docid, 
+                    rss_bad_entry_index_name, 
                     fixed=True)
 
         
@@ -158,14 +157,14 @@ def get_prev_back_date():
         date = datetime.datetime.now()
     else:
         date = dates[0].date
-    logging.info("back date is %s" % date)
+    logging.info("back date is %s"  % date)
     return dates[0].date - datetime.timedelta(days=1)
 
 class FetchRSS(webapp2.RequestHandler):
     def fetch(self, datestr):
         logging.info('FETCHING RSS FOR DATE %s' % datestr)
         range = 50000
-        bigrange = range * 5
+        bigrange = range*5
         start = 0
         toohigh = 1000000
         while start < rss.price_tail:
@@ -179,7 +178,7 @@ class FetchRSS(webapp2.RequestHandler):
                 'start': start 
             }
             taskqueue.add(url='/admin_fetch_rss_batch', params=params)
-            start += cur_range + 1
+            start +=  cur_range + 1
             
         params = {
             'date' : datestr,
@@ -193,16 +192,16 @@ class FetchRSS(webapp2.RequestHandler):
         date = self.request.get('date')
         if date == backwards_date:
             date = get_prev_back_date()
-            # don't index too much
+            #don't index too much
             if date.year < 2013 and date.month < 9:
                 return
         elif date == yesterday_date:
-            # get the yesterday's date
-            # this is for ensuring that we indexedeverything from yesterday
+            #get the yesterday's date
+            #this is for ensuring that we indexedeverything from yesterday
             logging.info('today is %s' % datetime.datetime.now())
             date = datetime.datetime.now() - datetime.timedelta(days=1)
             logging.info('indexing yesterday %s' % date)
-            # datestr = '%s.%s.%s' % (date.day, date.month, date.year)
+            #datestr = '%s.%s.%s' % (date.day, date.month, date.year)
         else:
             try:
                 date = datetime.datetime.strptime(date, '%d.%m.%Y')
@@ -231,8 +230,6 @@ class ClearRSSIndex(webapp2.RequestHandler):
         self.redirect('/')
 
 
-
-
 class RSSEntryPrinter(webapp2.RequestHandler):
     def get(self):
         query = models.RSSEntry.all()
@@ -249,7 +246,7 @@ class RSSEntryPrinter(webapp2.RequestHandler):
         self.response.out.write(template.render(template_values))
 
 
-exptime = 3600 * 24
+exptime = 3600*24
 
 def parse_offset(offset):
     try:
@@ -297,21 +294,21 @@ class BadRSSPrinter(FrontEnd):
             return entries
     
     def retreive_with_offset(self, query, offset):
-        # cursor can only implement "view-next-page" func without prev page
-        # this is not convenient.
-        # offset however just discards the entries, they are still retrieved
-        # for now we are willing to pay 'offset' price
-        # cursor = self.get_cursor()
+        #cursor can only implement "view-next-page" func without prev page
+        #this is not convenient.
+        #offset however just discards the entries, they are still retrieved
+        #for now we are willing to pay 'offset' price
+        #cursor = self.get_cursor()
         
-        # retrive one limit more to know if we have links for next page
+        #retrive one limit more to know if we have links for next page
         entries = list(query.run(limit=retreive_limit, offset=offset))
         return entries
         
     def retreive_with_cursor(self, query, id):
-        # cursor can only implement "view-next-page" func without prev page
-        # this is not convenient.
-        # offset however just discards the entries, they are still retrieved
-        # for now we are willing to pay 'offset' price
+        #cursor can only implement "view-next-page" func without prev page
+        #this is not convenient.
+        #offset however just discards the entries, they are still retrieved
+        #for now we are willing to pay 'offset' price
         cursor = self.get_cursor(id)
         return list(query.run(limit=retreive_limit, start_cursor=cursor))
     
@@ -323,9 +320,9 @@ class BadRSSPrinter(FrontEnd):
             return []
         for i in range(0, (offset + num_links) / printer_limit):
             pages.append((i * printer_limit, i))
-        # if we have too much pages, hide first ones
+        #if we have too much pages, hide first ones
         pages = pages[-max_pages:]
-        # add pretty arrow
+        #add pretty arrow
         if num_links == retreive_limit:
             pages[-1] = (pages[-1][0], '>')
         return pages
@@ -365,7 +362,7 @@ class BadRSSPrinter(FrontEnd):
             
     def get(self):
         date = self.request.get('date')
-        logging.info('DATE %s' % date)
+        logging.info('DATE %s' %date)
         try:
             date = datetime.datetime.strptime(date, '%d.%m.%Y')
         except:
@@ -391,7 +388,7 @@ class IndexRSSEntries(webapp2.RequestHandler):
         date = self.request.get('date')
         if date == backwards_date:
             date = get_prev_back_date()
-            # don't index too much
+            #don't index too much
             if date.year < 2013 and date.month < 9:
                 return
         else:
@@ -412,7 +409,7 @@ class IndexRSSEntries(webapp2.RequestHandler):
             if b:
                 logging.info('bad : %s' % b)
                 keyname = rss.keyname_from_link(entry.url)
-                bad = models.RSSBadEntry.get_or_insert(keyname,
+                bad = models.RSSBadEntry.get_or_insert(keyname, 
                     url=entry.url, desc=entry.desc, bad=b, date=entry.date)
         memcache.flush_all()
         keyname = str(date)
@@ -460,7 +457,7 @@ class MsgHandler(FrontEnd):
         
     def get_escaped(self, param):
         content = self.request.get(param)
-        template = jinja_environment.get_template('mail.html')
+        template = jinja_environment.get_template('safe.html')
         return template.render({'content': content})
         
     def post(self):
@@ -483,7 +480,7 @@ class MsgHandler(FrontEnd):
             mail.send_mail_to_admins(
                 sender=email, subject=subject, body=message)
         except:
-            logging.info("email failed with %s %s %s " % (name, email, message))
+            logging.info("email failed with %s %s %s " %(name, email, message))
         self.redirect('/')
 
 
@@ -515,7 +512,7 @@ class ClearIndex(webapp2.RequestHandler):
 
     def get(self):
         self.clear(rss_entry_index_name)
-        # self.clear(rss_bad_entry_index_name)
+        #self.clear(rss_bad_entry_index_name)
         self.redirect('/admin_')
 
     def post(self):
@@ -530,8 +527,8 @@ class SearchPrinter(FrontEnd):
     def render_search_results(self, query):
         logging.info('searching for query: %s' % query)
         logging.info('type q before: %s' % type(query))
-        # datestr = self.request.get('date')
-        # date = datetime.datetime.strptime(datestr, '%d.%m.%Y')
+        #datestr = self.request.get('date')
+        #date = datetime.datetime.strptime(datestr, '%d.%m.%Y')
 
         # Disabled.
         # results = msearch.search_entries(query=query,
@@ -544,11 +541,11 @@ class SearchPrinter(FrontEnd):
             template = jinja_environment.get_template('search_error.html')
             return template.render({})
         
-        # count = len(results)
+        #count = len(results)
 
-        # We will not search in regular entries since there are too
-        # many of them and search quota is only
-        # 20,000/day and 250MB total index size
+        #We will not search in regular entries since there are too
+        #many of them and search quota is only
+        #20,000/day and 250MB total index size
         # template_values = {
         #     'title'     : 'first 20 regular tenders',
         #     'count'     : len(results),
@@ -565,7 +562,7 @@ class SearchPrinter(FrontEnd):
         if debug:
             hidden_template_values['debug'] = True
         template = jinja_environment.get_template('search_results.html')
-        # reg_res = template.render(template_values)
+        #reg_res = template.render(template_values)
         hidden_res = template.render(hidden_template_values)
         return hidden_res
 
@@ -578,9 +575,9 @@ class SearchPrinter(FrontEnd):
         body = template.render({'search_results' : search_results})
         self.render_page(body)
 
-class TestMail(webapp2.RequestHandler):      
+class Mail(webapp2.RequestHandler):      
     def get(self):
-        d = datetime.now()
+        d = datetime.datetime.now()
         params = {
          "id" : 1512,
          "desc": u'куплю всякую бесполезную хуйню, дорого',
@@ -614,22 +611,22 @@ class TestMail(webapp2.RequestHandler):
          "curr_year" : 2013
          }
         mg = mail_gen.MailGenerator()
-        self.response.out.write(mg.gen_mail(params))
+        self.response.out.write(mg.gen_mail(params))             
+        
 
 app = webapp2.WSGIApplication([('/', MainPage),
                                ('/admin_rss_entry', RSSEntryPrinter),
                                ('/admin_', AdminPage),
                                ('/bad', BadRSSPrinter),
                                ('/contact', MsgHandler),
-                               # ('/admin_clear_rss_index', ClearRSSIndex),
+                               #('/admin_clear_rss_index', ClearRSSIndex),
                                ('/admin_index_rss_entries', IndexRSSEntries),
                                ('/admin_add_index_date', AddIndexeddate),
                                ('/admin_test_cron', TestCron),
                                ('/admin_fetch_rss', FetchRSS),
-                               ('/admin_fetch_rss_batch', FetchRSSBatch),
+                               ('/admin_fetch_rss_batch',FetchRSSBatch),
                                ('/admin_index', IndexBadEntries),
                                ('/admin_clear_index', ClearIndex),
-                               ('/mail', TestMail),
-                               ('/mail2', mail_gen.MailGenerator),
+                               ('/mail', Mail),
                                ('/search', SearchPrinter)],
                               debug=True)

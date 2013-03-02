@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import unicodedata
-import itertools
 
 def is_cyrillic(word):
     for c in word:
@@ -52,7 +51,14 @@ def decorate(word):
         res += c
     return res
 
- 
+# def decorate_body(body):
+#     res = []
+#     for word in body.split():
+#         if is_interleaved(word):
+#             word = decorate(word)
+#         res.append(word.encode('utf-8'))
+#     return " ".join(res)
+
 def decorate_body_all(body):
     res = []
     if body:
@@ -97,21 +103,27 @@ def fix_body(body):
             res.extend([fxword for fxword in fixed_words])
     return " ".join(res)
 
+
+
+   
 def decorate_body(body):
-    decorators_list = [decorate_interleaved_body, decorate_splited_body]
+    decorators_list = [decorate_interleaved_body]
     tmp = body
     for d in decorators_list :
         tmp = d(tmp)
-    return tmp
+    return tmp        
+        
         
 
+        
 def decorate_interleaved_body(body):
     res = []
     for word in body.split():
         if is_interleaved(word):
             word = decorate(word)
-        res.append(word)  # .encode('utf-8')
+        res.append(word.encode('utf-8'))  # .encode('utf-8')
     return " ".join(res)
+       
 
 def decorate_splited_body(body):
     res = []
@@ -158,12 +170,12 @@ def is_splited_words(body):
     return list(itertools.ifilter(lambda s: len(s) > 2, suspicious))
 
 if __name__ == '__main__':
-    str = u"Dыполнениеffff строительно-монтажных и пусконаладочных работ по объекту: Реконс т р у к ц и я ВЛ 6 кВ «Черемушки» ТП 3062 в р.п. Атиг, в ПО «Западные электрические сети» филиала ОАО «МРСК Урала» - «Свердловэнерго» (219755)"        
-    str2 = u'<font color="red">D</font>ыполнение'
-    # print decorate_interleaved_body(str)
-    # print "1"
-    print decorate_body(str)
-    # print decorate_body(str)
+    body = u'interleaved: TесT cy: Тест lat: Tect '
+    print decorate_body_all(fix_body(body))
+
+        
+
+
 
 
 
